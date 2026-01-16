@@ -1,31 +1,47 @@
 import React, { useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+
 import { BarChart3, Users, Package, ShoppingCart, TrendingUp, AlertCircle, CheckCircle, Clock, DollarSign } from 'lucide-react';
 import { Link } from "react-router-dom";
 
 export default function Dashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState('mois');
- const [showLinks, setShowLinks] = useState(false);
-  const stats = [
-    { label: 'Commandes du mois', value: '47', change: '+12%', icon: ShoppingCart, color: 'bg-blue-500' },
-    { label: 'Revenus', value: '285,450 DA', change: '+8%', icon: DollarSign, color: 'bg-green-500' },
-    { label: 'Clients actifs', value: '128', change: '+5%', icon: Users, color: 'bg-purple-500' },
-    { label: 'Produits', value: '156', change: '+2', icon: Package, color: 'bg-orange-500' }
-  ];
+  const [showLinks, setShowLinks] = useState(false);
 
+  // --- Données ---
   const recentOrders = [
-    { id: 'CMD-001', client: 'Ahmed Benali', produit: 'Fenêtre coulissante', montant: '45,000 DA', statut: 'En production', date: '08/11/2024' },
-    { id: 'CMD-002', client: 'Fatima Kader', produit: 'Porte d\'entrée', montant: '78,500 DA', statut: 'Livrée', date: '07/12/2024' },
-    { id: 'CMD-003', client: 'Karim Meziane', produit: 'Volets roulants', montant: '32,000 DA', statut: 'En attente', date: '06/12/2025' },
-    { id: 'CMD-004', client: 'Leila Sahraoui', produit: 'Baie vitrée', montant: '95,000 DA', statut: 'En production', date: '05/11/2024' }
+    { id: 'CMD-001', client: 'Ahmed Benali', produit: 'Fenêtre coulissante', montant: 45000, statut: 'En production', date: '12/01/2026' },
+    { id: 'CMD-002', client: 'Ahmed Benali', produit: 'Fenêtre toilette', montant: 37500, statut: 'En production', date: '12/01/2026' },
+    { id: 'CMD-003', client: 'Fatima Kader', produit: 'Porte 2Battan', montant: 78500, statut: 'Livrée', date: '13/01/2026' },
+    { id: 'CMD-004', client: 'Karim Meziane', produit: 'Porte 1Battan', montant: 32000, statut: 'En attente', date: '06/02/2026' },
+    { id: 'CMD-005', client: 'Leila Sahraoui', produit: 'Porte toilette', montant: 95000, statut: 'En production', date: '07/11/2026' }
   ];
 
+  const totalRevenus = recentOrders.reduce((total, order) => total + order.montant, 0);
+
+  const stats = [
+    { label: 'Commandes du mois', value: recentOrders.length, change: '+12%', icon: ShoppingCart, color: 'bg-blue-500' },
+    { label: 'Revenus', value: totalRevenus.toLocaleString('fr-FR') + ' FCFA', change: '+8%', icon: DollarSign, color: 'bg-green-500' },
+    { label: 'Clients actifs', value: 128, change: '+5%', icon: Users, color: 'bg-purple-500' },
+    { label: 'Produits', value: 156, change: '+2%', icon: Package, color: 'bg-orange-500' }
+  ];
+
+ 
   const topProducts = [
-    { nom: 'Fenêtre coulissante', ventes: 23, revenus: '892,000 DA' },
-    { nom: 'Porte d\'entrée', ventes: 15, revenus: '1,245,000 DA' },
-    { nom: 'Volets roulants', ventes: 18, revenus: '576,000 DA' },
-    { nom: 'Baie vitrée', ventes: 12, revenus: '1,140,000 DA' }
+    { nom: 'Fenêtre coulissante', ventes: 20, revenus: 892000 },
+    { nom: 'Fenêtre toilette', ventes: 8, revenus: 892000 },
+    { nom: 'Porte 2Battan', ventes: 15, revenus: 1245000 },
+    { nom: 'Porte 1Battan', ventes: 18, revenus: 576000 },
+    { nom: 'Porte toilette', ventes: 12, revenus: 1140000 }
   ];
-
+   // --- Données pour le graphique ---
+  const chartData = topProducts.map(p => ({
+    name: p.nom,
+    ventes: p.ventes,
+    revenus: p.revenus
+  }));
+  
+  // --- Fonctions ---
   const getStatutColor = (statut) => {
     switch(statut) {
       case 'Livrée': return 'bg-green-100 text-green-800';
@@ -35,59 +51,29 @@ export default function Dashboard() {
     }
   };
 
+  const maxVentes = Math.max(...topProducts.map(p => p.ventes));
+
+  // --- Filtrage par période (exemple simple) ---
+  const filteredOrders = recentOrders; // ici tu peux appliquer un filtre selon selectedPeriod
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="px-6 py-4">
-
-        {/* Bouton visible seulement sur mobile (<640px) */}
-                       <button className="sm:hidden mb-2 px-4 py-2 bg-blue-600 text-white rounded-lg"
-                       onClick={() => setShowLinks(!showLinks)}
-                     > 
-                       {showLinks ? "Fermer le menu" : "Afficher le menu"}
-                     </button>
-               
-                       <div
-                       className={`${
-                         showLinks ? "grid grid-cols-2 gap-2" : "hidden"
-                       } sm:flex sm:items-center sm:justify-between sm:gap-2`}
-                     >
-                       <Link
-                         to="/gestion-clients"
-                         className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
-                       >
-                         Gestion clients
-                       </Link>
-                 <Link to="/gestion-commandes" className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200" >
-                          Gestion des Commandes
-                       </Link> 
-
-                       <Link
-                         to="/gestion-devis"
-                         className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
-                       >
-                         Gestion des devis
-                       </Link>
-                       <Link
-                         to="/gestion-depenses"
-                         className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
-                       >
-                         Gestion des dépenses
-                       </Link>
-                       <Link
-                         to="/gestion-de-stock"
-                         className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
-                       >
-                         Gestion des stocks
-                       </Link>
-                       <Link
-                         to="/gestion-de-facture"
-                         className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
-                       >
-                         Gestion des factures
-                       </Link>
-                     </div>      
+          <button className="sm:hidden mb-2 px-4 py-2 bg-blue-600 text-white rounded-lg"
+                  onClick={() => setShowLinks(!showLinks)}
+          > 
+            {showLinks ? "Fermer le menu" : "Afficher le menu"}
+          </button>
+          <div className={`${showLinks ? "grid grid-cols-2 gap-2" : "hidden"} sm:flex sm:items-center sm:justify-between sm:gap-2`}>
+            <Link to="/gestion-clients" className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200">Gestion clients</Link>
+            <Link to="/gestion-commandes" className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200">Gestion des Commandes</Link> 
+            <Link to="/gestion-devis" className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200">Gestion des devis</Link>
+            <Link to="/gestion-depenses" className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200">Gestion des dépenses</Link>
+            <Link to="/gestion-de-stock" className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200">Gestion des stocks</Link>
+            <Link to="/gestion-de-facture" className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200">Gestion des factures</Link>
+          </div>      
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Menuiserie Aluminium</h1>
@@ -132,14 +118,12 @@ export default function Dashboard() {
           ))}
         </div>
 
+        {/* Recent Orders */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Recent Orders */}
           <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-gray-900">Commandes récentes</h2>
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                Voir tout →
-              </button>
+              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">Voir tout →</button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -153,7 +137,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentOrders.map((order, index) => (
+                  {filteredOrders.map((order, index) => (
                     <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                       <td className="py-4 px-4">
                         <div className="font-semibold text-gray-900">{order.id}</div>
@@ -161,7 +145,7 @@ export default function Dashboard() {
                       </td>
                       <td className="py-4 px-4 text-sm text-gray-700">{order.client}</td>
                       <td className="py-4 px-4 text-sm text-gray-700">{order.produit}</td>
-                      <td className="py-4 px-4 text-sm font-semibold text-gray-900">{order.montant}</td>
+                      <td className="py-4 px-4 text-sm font-semibold text-gray-900">{order.montant.toLocaleString('fr-FR')} FCFA</td>
                       <td className="py-4 px-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatutColor(order.statut)}`}>
                           {order.statut}
@@ -173,32 +157,74 @@ export default function Dashboard() {
               </table>
             </div>
           </div>
+          {/* Graphique Ventes par Produit Amélioré */}
+<div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+  <h2 className="text-lg font-bold text-gray-900 mb-4">Ventes par produit</h2>
+  <ResponsiveContainer width="100%" height={250}>
+    <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+      {/* Définition du gradient */}
+      <defs>
+        <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#facc15" stopOpacity={1} />  {/* jaune vif */}
+          <stop offset="50%" stopColor="#f97316" stopOpacity={0.9} /> {/* orange */}
+          <stop offset="100%" stopColor="#dc2626" stopOpacity={0.8} /> {/* rouge brillant */}
+        </linearGradient>
+      </defs>
 
-          {/* Top Products */}
+      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+      <YAxis />
+      <Tooltip 
+        formatter={(value) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(value)} 
+      />
+      {/* Utilisation du gradient */}
+      <Bar dataKey="ventes" fill="url(#barGradient)" radius={[5, 5, 0, 0]} />
+    </BarChart>
+  </ResponsiveContainer>
+</div>
+
+
+          {/* Top Products Flashy */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-6">Produits populaires</h2>
-            <div className="space-y-4">
-              {topProducts.map((product, index) => (
-                <div key={index} className="border-b border-gray-100 pb-4 last:border-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-semibold text-gray-900">{product.nom}</h3>
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
-                      {product.ventes} ventes
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2 mr-3">
-                      <div 
-                        className="bg-blue-500 h-2 rounded-full" 
-                        style={{ width: `${(product.ventes / 25) * 100}%` }}
-                      ></div>
+            <div className="space-y-6">
+              {topProducts.map((product, index) => {
+                const percent = (product.ventes / maxVentes) * 100;
+
+                // Définition de la couleur selon le % de ventes
+                const getProgressColor = (percent) => {
+                  if(percent > 80) return 'from-green-400 to-green-600';
+                  if(percent > 50) return 'from-yellow-400 to-yellow-500';
+                  return 'from-red-400 to-red-600';
+                };
+
+                return (
+                  <div key={index} className="border-b border-gray-100 pb-4 last:border-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-semibold text-gray-900">{product.nom}</h3>
+                      <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-full font-medium">
+                        {product.ventes} ventes
+                      </span>
                     </div>
-                    <span className="text-sm font-bold text-gray-900">{product.revenus}</span>
+
+                    <div className="flex items-center justify-between gap-3">
+                      {/* Barre de progression flashy */}
+                      <div className="flex-1 h-4 bg-gray-200 rounded-full overflow-hidden relative group">
+                        <div
+                          className={`h-4 rounded-full transition-all duration-1000 shadow-inner bg-gradient-to-r ${getProgressColor(percent)} group-hover:scale-105 group-hover:animate-pulse`}
+                          style={{ width: `${percent}%` }}
+                        ></div>
+                      </div>
+                      
+                      <span className="text-sm font-bold text-gray-900">
+                        {product.revenus.toLocaleString('fr-FR')} FCFA
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
+
         </div>
 
         {/* Alerts */}

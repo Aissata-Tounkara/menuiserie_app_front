@@ -8,7 +8,7 @@ export default function CreationDevis() {
   const [lignesDevis, setLignesDevis] = useState([]);
   const [showLinks, setShowLinks] = useState(false);
 // Paramètres globaux (facile à modifier plus tard)
-const PRIX_ALU_M2 = 65000;      // prix alu unique
+const PRIX_ALU_M2 = 45000;      // prix alu unique
 const TAUX_MAJORATION = 0.15;  // 15 %
 
   const [devisInfo, setDevisInfo] = useState({
@@ -41,7 +41,7 @@ const TAUX_MAJORATION = 0.15;  // 15 %
   ];
 
   const categories = [
-    { id: 1, nom: 'Fenêtres', produits: ['Fenêtre ', 'Fenêtre toilete'] },
+    { id: 1, nom: 'Fenêtres', produits: ['Fenêtre Coulisant', 'Fenêtre toilete'] },
     { id: 2, nom: 'Portes', produits: ['Porte-2Battan', 'Porte-1Battan', 'Porte-Toilette'] },
    
   ];
@@ -51,13 +51,13 @@ const TAUX_MAJORATION = 0.15;  // 15 %
 
   const formatsStandards = [
   // PORTES
-  { produit: 'Porte-2Battan', largeur: 1.20, hauteur: 2.10, prix: 150000 },
-  { produit: 'Porte-1Battan', largeur: 0.80, hauteur: 2.10, prix: 100000 },
-  { produit: 'Porte-Toilette', largeur: 0.70, hauteur: 2.10, prix: 85000 },
+  { produit: 'Porte-2Battan', largeur: 1.20, hauteur: 2.10, prix: 147500 },
+  { produit: 'Porte-1Battan', largeur: 0.80, hauteur: 2.10, prix: 97500 },
+  { produit: 'Porte-Toilette', largeur: 0.70, hauteur: 2.10, prix: 87500 },
 
   // FENÊTRES
-  { produit: 'Fenêtre ', largeur: 1.20, hauteur: 1.10, prix: 100000 },
-  { produit: 'Fenêtre toilete', largeur: 0.60, hauteur: 0.60, prix: 75000 }
+  { produit: 'Fenêtre Coulisant', largeur: 1.20, hauteur: 1.10, prix: 97500 },
+  { produit: 'Fenêtre toilette', largeur: 0.60, hauteur: 0.60, prix: 37500 }
 ];
 
 const calculatePrix = (produit, largeur, hauteur) => {
@@ -563,7 +563,7 @@ const calculatePrix = (produit, largeur, hauteur) => {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-green-800">Prix unitaire estimé:</span>
                     <span className="text-lg font-bold text-green-900">
-                      {calculatePrix(currentLigne.produit, currentLigne.largeur, currentLigne.hauteur).toLocaleString()} DA
+                      {calculatePrix(currentLigne.produit, currentLigne.largeur, currentLigne.hauteur).toLocaleString()} Fcfa
                     </span>
                   </div>
 
@@ -604,12 +604,12 @@ const calculatePrix = (produit, largeur, hauteur) => {
                             )}
                             {ligne.Alluminium && <div>Alluminium: {ligne.Alluminium}</div>}
                             {ligne.vitrage && <div>Vitrage: {ligne.vitrage}</div>}
-                            <div>Quantité: {ligne.quantite} × {ligne.prixUnitaire.toLocaleString()} DA</div>
+                            <div>Quantité: {ligne.quantite} × {ligne.prixUnitaire.toLocaleString()} Fcfa</div>
                           </div>
                         </div>
                         <div className="text-right ml-4">
                           <div className="font-bold text-gray-900 text-lg mb-2">
-                            {ligne.sousTotal.toLocaleString()} DA
+                            {ligne.sousTotal.toLocaleString()} Fcfa
                           </div>
                           <button
                             onClick={() => supprimerLigne(ligne.id)}
@@ -652,7 +652,7 @@ const calculatePrix = (produit, largeur, hauteur) => {
                 <div className="flex justify-between">
                   <span className="text-gray-700">Sous-total:</span>
                   <span className="font-semibold text-gray-900">
-                    {calculerSousTotal().toLocaleString()} DA
+                    {calculerSousTotal().toLocaleString()} Fcfa
                   </span>
                 </div>
 
@@ -675,7 +675,7 @@ const calculatePrix = (produit, largeur, hauteur) => {
                     />
                     <span className="flex items-center text-gray-600">%</span>
                     <span className="flex items-center text-sm text-red-600 font-semibold ml-auto">
-                      - {calculerRemise().toLocaleString()} DA
+                      - {calculerRemise().toLocaleString()} Fcfa
                     </span>
                   </div>
                 </div>
@@ -683,19 +683,19 @@ const calculatePrix = (produit, largeur, hauteur) => {
                 <div className="flex justify-between">
                   <span className="text-gray-700">Total HT:</span>
                   <span className="font-semibold text-gray-900">
-                    {calculerTotalHT().toLocaleString()} DA
+                    {calculerTotalHT().toLocaleString()} Fcfa
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">TVA (0%):</span>
                   <span className="font-semibold text-gray-900">
-                    {calculerTVA().toLocaleString()} DA
+                    {calculerTVA().toLocaleString()} Fcfa
                   </span>
                 </div>
                 <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
                   <span className="text-lg font-bold text-gray-900">Total TTC:</span>
                   <span className="text-2xl font-bold text-blue-600">
-                    {calculerTotalTTC().toLocaleString()} DA
+                    {calculerTotalTTC().toLocaleString()} Fcfa
                   </span>
                 </div>
               </div>
@@ -720,11 +720,11 @@ const calculatePrix = (produit, largeur, hauteur) => {
                   <div className="bg-blue-50 rounded-lg p-3 text-sm">
                     <div className="flex justify-between mb-1">
                       <span className="text-blue-700">Acompte:</span>
-                      <span className="font-semibold text-blue-900">{calculerAcompte().toLocaleString()} DA</span>
+                      <span className="font-semibold text-blue-900">{calculerAcompte().toLocaleString()} Fcfa</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-blue-700">Solde:</span>
-                      <span className="font-semibold text-blue-900">{(calculerTotalTTC() - calculerAcompte()).toLocaleString()} DA</span>
+                      <span className="font-semibold text-blue-900">{(calculerTotalTTC() - calculerAcompte()).toLocaleString()} Fcfa</span>
                     </div>
                   </div>
                 )}

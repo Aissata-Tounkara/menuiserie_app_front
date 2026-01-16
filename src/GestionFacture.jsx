@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Filter, Eye, Download, Send, DollarSign, AlertCircle, CheckCircle, Clock, XCircle, Calendar, User, CreditCard, FileText, Printer, Plus, Trash2 } from 'lucide-react';
+import { Hammer, Wrench } from 'lucide-react';
 
 export default function GestionFactures() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -118,8 +119,8 @@ export default function GestionFactures() {
 
   const statsCards = [
     { label: 'Total factures', value: factures.length, icon: FileText, color: 'bg-blue-500' },
-    { label: 'Chiffre d\'affaires', value: `${calculateTotalCA().toLocaleString()} DA`, icon: DollarSign, color: 'bg-green-500' },
-    { label: 'En attente', value: `${calculateTotalEnAttente().toLocaleString()} DA`, icon: Clock, color: 'bg-orange-500' },
+    { label: 'Chiffre d\'affaires', value: `${calculateTotalCA().toLocaleString()} Fcfa`, icon: DollarSign, color: 'bg-green-500' },
+    { label: 'En attente', value: `${calculateTotalEnAttente().toLocaleString()} Fcfa`, icon: Clock, color: 'bg-orange-500' },
     { label: 'Factures payées', value: factures.filter(f => getActualStatus(f) === 'Payée').length, icon: CheckCircle, color: 'bg-purple-500' }
   ];
 
@@ -312,14 +313,14 @@ export default function GestionFactures() {
                         <div className="text-sm font-medium text-gray-900">{facture.dateEcheance}</div>
                       </td>
                       <td className="py-4 px-4">
-                        <div className="font-bold text-gray-900">{facture.montantTTC.toLocaleString()} DA</div>
-                        <div className="text-xs text-gray-500">HT: {facture.montantHT.toLocaleString()} DA</div>
+                        <div className="font-bold text-gray-900">{facture.montantTTC.toLocaleString()} Fcfa</div>
+                        <div className="text-xs text-gray-500">HT: {facture.montantHT.toLocaleString()} Fcfa</div>
                       </td>
                       <td className="py-4 px-4">
                         <div className="text-sm">
-                          <div className="font-semibold text-green-600">{facture.montantPaye.toLocaleString()} DA</div>
+                          <div className="font-semibold text-green-600">{facture.montantPaye.toLocaleString()} Fcfa</div>
                           {reste > 0 && (
-                            <div className="text-xs text-orange-600">Reste: {reste.toLocaleString()} DA</div>
+                            <div className="text-xs text-orange-600">Reste: {reste.toLocaleString()} Fcfa</div>
                           )}
                         </div>
                       </td>
@@ -364,43 +365,66 @@ export default function GestionFactures() {
       {showModal && selectedFacture && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-8">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <div className="text-3xl font-bold mb-2">🪟</div>
-                  <h2 className="text-2xl font-bold">FACTURE</h2>
-                  <p className="text-blue-100 mt-1">Menuiserie Aluminium</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-3xl font-bold">{selectedFacture.numeroFacture}</div>
-                  <div className="mt-2 text-blue-100 text-sm">
-                    <div>Date: {selectedFacture.dateEmission}</div>
-                    <div>Échéance: {selectedFacture.dateEcheance}</div>
-                  </div>
-                </div>
-              </div>
+<div className="bg-gray-800 text-white p-6 rounded-lg shadow-md">
 
-              <div className="grid grid-cols-2 gap-6 text-sm">
-                <div>
-                  <div className="font-semibold mb-2">Entreprise:</div>
-                  <div className="text-blue-100">
-                    <div>Menuiserie Aluminium</div>
-                    <div>Zone Industrielle, Oran</div>
-                    <div>Tél: 041 XX XX XX</div>
-                    <div>Email: contact@menuiserie.dz</div>
-                  </div>
-                </div>
-                <div>
-                  <div className="font-semibold mb-2">Facturé à:</div>
-                  <div className="text-blue-100">
-                    <div className="font-semibold text-white">{selectedFacture.client.nom}</div>
-                    <div>{selectedFacture.client.adresse}</div>
-                    <div>Tél: {selectedFacture.client.tel}</div>
-                    <div>Email: {selectedFacture.client.email}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+  {/* Ligne 1 : Logo tournevis + Nom entreprise */}
+  <div className="flex items-start space-x-4 mb-3">
+    {/* Logo tournevis (à la place du marteau) */}
+    <div className="bg-teal-500 rounded-lg p-3 flex items-center justify-center">
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2v4M12 18v4M4 12h4M16 12h4M7.5 7.5l2.5 2.5M14 14l2.5 2.5M16.5 7.5l-2.5 2.5M10 14L7.5 16.5"/>
+        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2"/>
+      </svg>
+    </div>
+    <div>
+      <h1 className="text-2xl font-bold">TOUARA</h1>
+      <p className="text-teal-300 text-sm">Menuiserie Aluminium</p>
+    </div>
+  </div>
+
+  {/* Adresse complète */}
+  <div className="text-xs leading-tight mb-6">
+    <p><strong>Chez Moussa TOUNKARA</strong></p>
+    <p>COMMERÇANT – FAUTEUILLE BUREAUTIQUE – ALUMINIUM ALTRADE, BRONZE, CHAMPAGNE – LAC BLANC – FER – BOIS</p>
+    <p>HIPPODROME Rue 224 — Tél : 79 06 44 89 — NIF : 0822099M</p>
+    <p>Bamako – République du Mali</p>
+  </div>
+
+  {/* Facture + Icônes + Date — alignés à droite */}
+  <div className="flex justify-end items-end space-x-4">
+    
+    <div className="flex flex-col items-end space-y-4">
+      {/* FACTURE avec icônes */}
+      <div className="flex items-center space-x-2">
+        <h2 className="text-3xl font-extrabold">FACTURE</h2>
+        
+        {/* Icônes rondes */}
+        <div className="flex space-x-2">
+          {/* Pince universelle (Wrench) */}
+          <div className="bg-teal-500 rounded-full p-2 hover:bg-teal-600 transition">
+            <Wrench className="h-5 w-5 text-white" />
+          </div>
+          
+          {/* Tournevis (SVG personnalisé) */}
+          <div className="bg-teal-500 rounded-full p-2 hover:bg-teal-600 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2v4M12 18v4M4 12h4M16 12h4M7.5 7.5l2.5 2.5M14 14l2.5 2.5M16.5 7.5l-2.5 2.5M10 14L7.5 16.5"/>
+              <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      {/* Date */}
+      <div className="bg-gray-700 rounded-md px-4 py-2 text-center">
+        <span className="block text-xs text-teal-300">Date d'émission</span>
+        <span className="text-sm font-semibold">09/01/2026</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 
             <div className="p-8">
               <div className="mb-6 flex items-center justify-between">
@@ -433,8 +457,8 @@ export default function GestionFactures() {
                         <tr key={idx} className="border-t border-gray-100">
                           <td className="py-3 px-4 text-sm text-gray-900">{article.designation}</td>
                           <td className="py-3 px-4 text-sm text-gray-900 text-center">{article.quantite}</td>
-                          <td className="py-3 px-4 text-sm text-gray-900 text-right">{article.prixUnitaire.toLocaleString()} DA</td>
-                          <td className="py-3 px-4 text-sm font-semibold text-gray-900 text-right">{article.total.toLocaleString()} DA</td>
+                          <td className="py-3 px-4 text-sm text-gray-900 text-right">{article.prixUnitaire.toLocaleString()} Fcfa</td>
+                          <td className="py-3 px-4 text-sm font-semibold text-gray-900 text-right">{article.total.toLocaleString()} Fcfa</td>
                         </tr>
                       ))}
                     </tbody>
@@ -446,26 +470,26 @@ export default function GestionFactures() {
                 <div className="bg-gray-50 rounded-lg p-6 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Sous-total HT:</span>
-                    <span className="font-semibold text-gray-900">{selectedFacture.montantHT.toLocaleString()} DA</span>
+                    <span className="font-semibold text-gray-900">{selectedFacture.montantHT.toLocaleString()} Fcfa</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">TVA (19%):</span>
-                    <span className="font-semibold text-gray-900">{selectedFacture.tva.toLocaleString()} DA</span>
+                    <span className="text-gray-600">TVA (0%):</span>
+                    <span className="font-semibold text-gray-900">{selectedFacture.tva.toLocaleString()} Fcfa</span>
                   </div>
                   <div className="border-t border-gray-300 pt-3 flex justify-between text-lg">
                     <span className="font-bold text-gray-900">Total TTC:</span>
-                    <span className="font-bold text-blue-600">{selectedFacture.montantTTC.toLocaleString()} DA</span>
+                    <span className="font-bold text-blue-600">{selectedFacture.montantTTC.toLocaleString()} Fcfa</span>
                   </div>
                   {selectedFacture.montantPaye > 0 && (
                     <>
                       <div className="flex justify-between text-sm text-green-600">
                         <span>Montant payé:</span>
-                        <span className="font-semibold">{selectedFacture.montantPaye.toLocaleString()} DA</span>
+                        <span className="font-semibold">{selectedFacture.montantPaye.toLocaleString()} Fcfa</span>
                       </div>
                       {selectedFacture.montantTTC - selectedFacture.montantPaye > 0 && (
                         <div className="flex justify-between text-sm text-orange-600">
                           <span className="font-semibold">Reste à payer:</span>
-                          <span className="font-bold">{(selectedFacture.montantTTC - selectedFacture.montantPaye).toLocaleString()} DA</span>
+                          <span className="font-bold">{(selectedFacture.montantTTC - selectedFacture.montantPaye).toLocaleString()} Fcfa</span>
                         </div>
                       )}
                     </>
@@ -534,7 +558,7 @@ export default function GestionFactures() {
               <div className="bg-gray-50 rounded-lg p-4 text-sm">
                 <div className="flex justify-between mb-2">
                   <span className="text-gray-600">Montant TTC:</span>
-                  <span className="font-semibold text-gray-900">{factureToConfirm.montantTTC.toLocaleString()} DA</span>
+                  <span className="font-semibold text-gray-900">{factureToConfirm.montantTTC.toLocaleString()} Fcfa</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Client:</span>

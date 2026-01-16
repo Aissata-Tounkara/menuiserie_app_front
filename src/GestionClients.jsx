@@ -231,48 +231,48 @@ export default function GestionClients() {
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="px-6 py-4">
      {/* Bouton visible seulement sur mobile (<640px) */}
-                    <button className="sm:hidden mb-2 px-4 py-2 bg-blue-600 text-white rounded-lg"
-                    onClick={() => setShowLinks(!showLinks)}
-                  > 
-                    {showLinks ? "Fermer le menu" : "Afficher le menu"}
-                  </button>
-            
-                    <div
-                    className={`${
-                      showLinks ? "grid grid-cols-2 gap-2" : "hidden"
-                    } sm:flex sm:items-center sm:justify-between sm:gap-2`}
-                  >
-                    <Link
-                      to="/dashboard"
-                      className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
+                      <button className="sm:hidden mb-2 px-4 py-2 bg-blue-600 text-white rounded-lg"
+                      onClick={() => setShowLinks(!showLinks)}
+                    > 
+                      {showLinks ? "Fermer le menu" : "Afficher le menu"}
+                    </button>
+              
+                      <div
+                      className={`${
+                        showLinks ? "grid grid-cols-2 gap-2" : "hidden"
+                      } sm:flex sm:items-center sm:justify-between sm:gap-2`}
                     >
-                      Dashboard
-                    </Link>
-                    <Link
-                      to="/gestion-commandes"
-                      className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
-                    >
-                      Gestion des Commandes
-                    </Link>
-                    <Link
-                      to="/gestion-devis"
-                      className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
-                    >
-                      Gestion des devis
-                    </Link>
-                    <Link
-                      to="/gestion-de-stock"
-                      className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
-                    >
-                      Gestion des stocks
-                    </Link>
-                    <Link
-                      to="/gestion-de-facture"
-                      className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
-                    >
-                      Gestion des factures
-                    </Link>
-                    <Link
+                      <Link
+                        to="/dashboard"
+                        className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
+                      >
+                        Dashboard
+                      </Link>
+                      <Link
+                        to="/gestion-commandes"
+                        className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
+                      >
+                        Gestion des Commandes
+                      </Link>
+                      <Link
+                        to="/gestion-devis"
+                        className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
+                      >
+                        Gestion des devis
+                      </Link>
+                      <Link
+                        to="/gestion-de-stock"
+                        className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
+                      >
+                        Gestion des stocks
+                      </Link>
+                      <Link
+                        to="/gestion-de-facture"
+                        className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
+                      >
+                        Gestion des factures
+                      </Link>
+                      <Link
                       to="/gestion-depenses"
                       className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
                     >
@@ -484,7 +484,7 @@ export default function GestionClients() {
                     <div className="bg-green-50 rounded-lg p-4 text-center">
                       <DollarSign className="w-8 h-8 text-green-600 mx-auto mb-2" />
                       <div className="text-2xl font-bold text-gray-900">{selectedClient.totalAchats.toLocaleString()}</div>
-                      <div className="text-sm text-gray-600">Total achats (DA)</div>
+                      <div className="text-sm text-gray-600">Total achats (Fcfa)</div>
                     </div>
                     <div className="bg-purple-50 rounded-lg p-4 text-center">
                       <Calendar className="w-8 h-8 text-purple-600 mx-auto mb-2" />
