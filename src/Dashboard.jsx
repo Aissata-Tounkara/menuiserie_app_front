@@ -157,73 +157,10 @@ export default function Dashboard() {
               </table>
             </div>
           </div>
-          {/* Graphique Ventes par Produit Amélioré */}
-<div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-  <h2 className="text-lg font-bold text-gray-900 mb-4">Ventes par produit</h2>
-  <ResponsiveContainer width="100%" height={250}>
-    <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-      {/* Définition du gradient */}
-      <defs>
-        <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#facc15" stopOpacity={1} />  {/* jaune vif */}
-          <stop offset="50%" stopColor="#f97316" stopOpacity={0.9} /> {/* orange */}
-          <stop offset="100%" stopColor="#dc2626" stopOpacity={0.8} /> {/* rouge brillant */}
-        </linearGradient>
-      </defs>
-
-      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-      <YAxis />
-      <Tooltip 
-        formatter={(value) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(value)} 
-      />
-      {/* Utilisation du gradient */}
-      <Bar dataKey="ventes" fill="url(#barGradient)" radius={[5, 5, 0, 0]} />
-    </BarChart>
-  </ResponsiveContainer>
-</div>
 
 
-          {/* Top Products Flashy */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-6">Produits populaires</h2>
-            <div className="space-y-6">
-              {topProducts.map((product, index) => {
-                const percent = (product.ventes / maxVentes) * 100;
 
-                // Définition de la couleur selon le % de ventes
-                const getProgressColor = (percent) => {
-                  if(percent > 80) return 'from-green-400 to-green-600';
-                  if(percent > 50) return 'from-yellow-400 to-yellow-500';
-                  return 'from-red-400 to-red-600';
-                };
-
-                return (
-                  <div key={index} className="border-b border-gray-100 pb-4 last:border-0">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-semibold text-gray-900">{product.nom}</h3>
-                      <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-full font-medium">
-                        {product.ventes} ventes
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                      {/* Barre de progression flashy */}
-                      <div className="flex-1 h-4 bg-gray-200 rounded-full overflow-hidden relative group">
-                        <div
-                          className={`h-4 rounded-full transition-all duration-1000 shadow-inner bg-gradient-to-r ${getProgressColor(percent)} group-hover:scale-105 group-hover:animate-pulse`}
-                          style={{ width: `${percent}%` }}
-                        ></div>
-                      </div>
-                      
-                      <span className="text-sm font-bold text-gray-900">
-                        {product.revenus.toLocaleString('fr-FR')} FCFA
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        
 
         </div>
 
