@@ -1,155 +1,133 @@
-import React, { useState } from 'react';
-import { Phone, Mail, MapPin, Eye, Edit2, Trash2 } from 'lucide-react';
-import Pagination from './Pagination'; // Assurez-vous que le chemin est correct
+// components/tables/DataTable.jsx
 
-const DataTable = ({ columns, data, onView, onEdit, onDelete, itemsPerPage = 5 }) => {
+import React, { useState } from 'react';
+import { Eye, Edit2, Trash2, Download, Send, Calendar, Phone, Mail, MapPin, Package } from 'lucide-react';
+import PaginationTable from './PaginationTable'; // Assure-toi que ce composant existe
+
+const DataTable = ({ columns, data, actions = [], itemsPerPage = 5 }) => {
   const [currentPage, setCurrentPage] = useState(1);
 
-  // --- Logique de calcul ---
+  // Pagination logic
   const totalPages = Math.ceil(data.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentData = data.slice(indexOfFirstItem, indexOfLastItem);
 
-  const getBadgeColor = (status) => {
-    const colors = {
-      'Actif': 'bg-green-100 text-green-700',
-      'Inactif': 'bg-gray-100 text-gray-700',
-      'En attente': 'bg-yellow-100 text-yellow-700',
+  // Gestionnaire de couleurs pour les badges (Statuts)
+  const getStatusStyle = (status) => {
+    const styles = {
+      // Statuts Commandes / Production
+      'En production': 'bg-purple-100 text-purple-700',
+      'Payée': 'bg-green-100 text-green-700',
+      'Livré': 'bg-blue-100 text-blue-700',
+      'Prête': 'bg-orange-100 text-orange-700',
+      'Annulée': 'bg-red-100 text-red-700',
+      // Statuts Stock
+      'Bon': 'bg-green-100 text-green-700',
+      'Alerte': 'bg-red-100 text-red-700',
+      // Types Clients
       'Particulier': 'bg-orange-100 text-orange-700',
       'Entreprise': 'bg-blue-100 text-blue-700',
     };
-    return colors[status] || 'bg-gray-100 text-gray-700';
+    return styles[status] || 'bg-gray-100 text-gray-700';
   };
 
-  const renderCellContent = (column, row) => {
-    const value = row[column.key];
+  const renderCell = (item, col) => {
+    const value = item[col.key];
 
-    if (column.render) return column.render(value, row);
+    if (col.render) return col.render(value, item);
 
-    switch (column.type) {
-      case 'avatar':
-        return (
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-              {value.initials}
-            </div>
-            <div>
-              <div className="font-medium text-gray-800">{value.name}</div>
-              <div className="text-sm text-gray-500">{value.subtitle}</div>
-            </div>
-          </div>
-        );
-      case 'contact':
-        return (
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Phone className="w-4 h-4" />
-              <span>{value.phone}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Mail className="w-4 h-4" />
-              <span>{value.email}</span>
-            </div>
-          </div>
-        );
-      case 'location':
-        return (
-          <div className="flex items-start gap-2 text-sm text-gray-600 text-wrap max-w-xs">
-            <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span>{value}</span>
-          </div>
-        );
+    switch (col.type) {
       case 'badge':
         return (
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getBadgeColor(value)}`}>
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusStyle(value)}`}>
+            {col.icon && <span className="inline-block mr-1">{col.icon}</span>}
             {value}
           </span>
         );
-      case 'currency':
+      
+      case 'amount':
         return (
-          <div>
-            <div className="font-semibold text-gray-800">{value.amount}</div>
-            <div className="text-xs text-gray-500">{value.details}</div>
+          <div className="flex flex-col">
+            <span className="font-bold text-gray-900">{value} {item.currency || 'DA'}</span>
+            {item.ht && <span className="text-[10px] text-gray-500 uppercase">HT: {item.ht} {item.currency || 'DA'}</span>}
           </div>
         );
-      case 'number':
-        return <span className="font-semibold text-gray-800">{value}</span>;
+
+      case 'client':
+        return (
+          <div className="flex flex-col">
+            <span className="font-semibold text-gray-800">{value}</span>
+            {item.phone && <span className="text-xs text-gray-500">{item.phone}</span>}
+          </div>
+        );
+
+      case 'date':
+        return (
+          <div className="flex items-center gap-2 text-gray-600 text-sm">
+            <Calendar className="w-3.5 h-3.5 text-gray-400" />
+            <span>{value}</span>
+          </div>
+        );
+
       default:
-        return <span className="text-gray-700">{value}</span>;
+        return <span className="text-sm text-gray-700">{value}</span>;
     }
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="w-full bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              {columns.map((column, index) => (
-                <th
-                  key={index}
-                  className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-                >
-                  {column.header}
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-gray-50/50 border-b border-gray-100">
+              {columns.map((col, index) => (
+                <th key={index} className="px-6 py-4 text-[13px] font-semibold text-gray-500 uppercase tracking-wider">
+                  {col.label || col.header} {/* Supporte les deux clés */}
                 </th>
               ))}
-              {(onView || onEdit || onDelete) && (
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+              {actions.length > 0 && (
+                <th className="px-6 py-4 text-right text-[13px] font-semibold text-gray-500 uppercase">Actions</th>
               )}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {currentData.length > 0 ? (
-              currentData.map((row, rowIndex) => (
-                <tr key={rowIndex} className="hover:bg-gray-50/50 transition-colors">
-                  {columns.map((column, colIndex) => (
-                    <td key={colIndex} className="px-6 py-4 whitespace-nowrap">
-                      {renderCellContent(column, row)}
-                    </td>
-                  ))}
-                  {(onView || onEdit || onDelete) && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        {onView && (
-                          <button onClick={() => onView(row)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        )}
-                        {onEdit && (
-                          <button onClick={() => onEdit(row)} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg">
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                        )}
-                        {onDelete && (
-                          <button onClick={() => onDelete(row)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={columns.length + 1} className="px-6 py-10 text-center text-gray-500">
-                  Aucune donnée disponible
-                </td>
+          <tbody className="divide-y divide-gray-100">
+            {currentData.map((item, rowIndex) => (
+              <tr key={rowIndex} className="hover:bg-gray-50/30 transition-colors">
+                {columns.map((col, colIndex) => (
+                  <td key={colIndex} className="px-6 py-4 align-middle">
+                    {renderCell(item, col)}
+                  </td>
+                ))}
+                {actions.length > 0 && (
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-2">
+                      {actions.map((action, i) => (
+                        <button
+                          key={i}
+                          onClick={() => action.onClick(item)}
+                          className={`p-2 rounded-lg transition-colors ${action.className || 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        >
+                          {action.icon}
+                        </button>
+                      ))}
+                    </div>
+                  </td>
+                )}
               </tr>
-            )}
+            ))}
           </tbody>
         </table>
       </div>
 
-      {/* Utilisation du composant Pagination */}
-      <Pagination 
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={(page) => setCurrentPage(page)}
-      />
+      {/* Pagination uniquement si nécessaire */}
+      {totalPages > 1 && (
+        <PaginationTable 
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={(page) => setCurrentPage(page)}
+        />
+      )}
     </div>
   );
 };

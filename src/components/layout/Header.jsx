@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
+// Assurez-vous d'importer votre Select ici
+import Select from '../ui/Select'; 
 import { X, Save, Plus, Filter, Download, ChevronDown } from 'lucide-react';
 
-// Composant Header réutilisable
-const PageHeader = ({ 
+const Header = ({ 
   title, 
   subtitle, 
   navigationLinks = [],
   actions = [],
-  showPeriodSelector = false,
-  periodValue = "Ce mois",
-  onPeriodChange,
+  // Nouvelle prop générique pour le select
+  selectAction = null, 
   userAvatar,
   userName
 }) => {
@@ -49,36 +49,40 @@ const PageHeader = ({
         )}
 
         {/* Header content */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
             {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
           </div>
 
           {/* Right side actions */}
-          <div className="flex items-center gap-3">
-            {/* Period Selector */}
-            {showPeriodSelector && (
-              <select
-                value={periodValue}
-                onChange={(e) => onPeriodChange && onPeriodChange(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 cursor-pointer"
-              >
-                <option value="Ce mois">Ce mois</option>
-                <option value="Ce trimestre">Ce trimestre</option>
-                <option value="Cette année">Cette année</option>
-                <option value="Personnalisé">Personnalisé</option>
-              </select>
+          <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+            
+            {/* INTEGRATION DU CUSTOM SELECT */}
+            {selectAction && (
+              <div className="w-full sm:w-48"> 
+                {/* On enveloppe dans une div pour contrôler la largeur */}
+                <Select
+                  value={selectAction.value}
+                  onChange={selectAction.onChange}
+                  options={selectAction.options}
+                  placeholder={selectAction.placeholder}
+                  disabled={selectAction.disabled}
+                  // On peut passer null au label pour ne pas l'afficher dans le header
+                  label={null} 
+                  className="mb-0" // Reset margin s'il y en a par défaut
+                />
+              </div>
             )}
 
             {/* User Avatar */}
             {userAvatar && userName && (
-              <>
+              <div className="flex items-center gap-3 pl-2 border-l border-gray-200">
                 <span className="text-gray-700 font-medium hidden sm:inline">{userName}</span>
                 <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
                   {userAvatar}
                 </div>
-              </>
+              </div>
             )}
 
             {/* Action Buttons */}
@@ -103,3 +107,5 @@ const PageHeader = ({
     </header>
   );
 };
+
+export default Header;

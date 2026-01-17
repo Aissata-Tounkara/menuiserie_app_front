@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 // Composant Select réutilisable
-const CustomSelect = ({ 
+const Select = ({ 
   label, 
   value, 
   onChange, 
@@ -65,3 +65,5 @@ const CustomSelect = ({
     </div>
   );
 };
+
+export default Select;

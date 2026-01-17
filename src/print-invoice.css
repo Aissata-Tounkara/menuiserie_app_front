@@ -1,0 +1,57 @@
+/* src/print-invoice.css */
+
+/* ====== STYLES POUR L'IMPRESSION DES FACTURES ====== */
+@media print {
+  /* Cacher tout le reste de la page */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Afficher uniquement la facture */
+  .invoice-print,
+  .invoice-print * {
+    visibility: visible;
+  }
+
+  /* Positionner la facture en haut à gauche */
+  .invoice-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 20mm; /* Marges standard (environ 2 cm) */
+    font-size: 12pt;
+    line-height: 1.4;
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Supprimer les effets visuels inutiles à l'impression */
+  .invoice-print * {
+    background: transparent !important;
+    color: rgb(32, 23, 71) !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    border-color: rgb(23, 24, 68) !important;
+  }
+  
+  /* Éviter les sauts de page au milieu d’un tableau */
+  table {
+    page-break-inside: avoid;
+  }
+
+  /* S'assurer que les bordures s’impriment */
+  table, th, td {
+    border: 1px solid rgb(23, 24, 68) !important;
+  }
+
+  /* Cacher les boutons dans le modal */
+  .invoice-print button {
+    display: none !important;
+  }
+
+  /* Ajuster les images/logo si nécessaire */
+  .invoice-print img {
+    filter: grayscale(100%) contrast(100%);
+  }
+}

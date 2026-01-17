@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+const PaginationTable = ({ currentPage, totalPages, onPageChange }) => {
   // Ne pas afficher si une seule page
   if (totalPages <= 1) return null;
 
@@ -72,4 +72,4 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   );
 };
 
-export default Pagination;
+export default PaginationTable;
