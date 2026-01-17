@@ -6,7 +6,7 @@
  * - Téléchargements de fichiers binaires (PDF, images)
  */
 
-import { API_URL, STORAGE_KEYS, MESSAGES } from '@/lib/utils/constants';
+import { API_URL, STORAGE_KEYS, MESSAGES } from '../utils/constants';
 
 class ApiClient {
     constructor() {

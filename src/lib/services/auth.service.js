@@ -3,9 +3,9 @@
  * Centralise toutes les requêtes auth
  */
 
-import { apiClient } from '@/lib/api/client';
-import { ENDPOINTS } from '@/lib/api/endpoints';
-import { STORAGE_KEYS } from '@/lib/utils/constants';
+import { apiClient } from '../api/client';
+import { ENDPOINTS } from '../api/endpoints';
+import { STORAGE_KEYS } from '../utils/constants';
 
 export const authService = {
     /**
@@ -17,12 +17,12 @@ export const authService = {
 
         const response = await apiClient.post(ENDPOINTS.AUTH.LOGIN, loginData);
 
-        if (!response?.token || !response?.user) {
+        if (!response?.access_token || !response?.user) {
             throw new Error('Réponse invalide du serveur');
         }
 
         // Stocker token et utilisateur (toujours dans localStorage → session persistante)
-        localStorage.setItem(STORAGE_KEYS.TOKEN, response.token);
+        localStorage.setItem(STORAGE_KEYS.TOKEN, response.access_token);
         localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user));
 
         return response;

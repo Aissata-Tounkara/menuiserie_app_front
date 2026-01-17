@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { Lock, Mail, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
-
 import { useNavigate } from 'react-router-dom';
+
+// Imports depuis lib/
+import { useAuthStore } from './lib/store/authStore';
+import { validateEmail, validatePassword } from './lib/utils/validation';
+import { MESSAGES, ROUTES } from './lib/utils/constants';
 
 export default function PageConnexion() {
   const [showPassword, setShowPassword] = useState(false);
@@ -11,9 +15,13 @@ export default function PageConnexion() {
     rememberMe: false
   });
   const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const navigate = useNavigate();
+  
+  // Zustand store
+  const { login } = useAuthStore();
 
 
   const handleInputChange = (e) => {
@@ -31,41 +39,58 @@ export default function PageConnexion() {
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.email) {
-      newErrors.email = 'L\'email est requis';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email invalide';
+    // Validation email avec la fonction du utils
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.valid) {
+      newErrors.email = emailValidation.message;
     }
     
-    if (!formData.password) {
-      newErrors.password = 'Le mot de passe est requis';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Le mot de passe doit contenir au moins 6 caractères';
+    // Validation password avec la fonction du utils
+    const passwordValidation = validatePassword(formData.password);
+    if (!passwordValidation.valid) {
+      newErrors.password = passwordValidation.message;
     }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-const handleSubmit = (e) => {
+const handleSubmit = async (e) => {
   e.preventDefault();
 
   if (!validateForm()) return;
 
   setIsLoading(true);
+  setApiError('');
 
-  // Simulation de connexion (mock)
-  setTimeout(() => {
-    setIsLoading(false);
+  try {
+    // Appel au store pour la connexion
+    const response = await login({
+      email: formData.email,
+      password: formData.password,
+      remember: formData.rememberMe
+    });
+
+    // Succès
     setShowSuccess(true);
 
+    // Redirection après un délai
     setTimeout(() => {
       setShowSuccess(false);
-      console.log('Connexion réussie:', formData);
+      navigate(ROUTES.DASHBOARD);
+    }, 1500);
 
-      // Redirection vers dashboard
-      navigate('/dashboard');
-    }, 1000);
-  }, 1500);
+  } catch (error) {
+    setIsLoading(false);
+    
+    // Gestion des erreurs
+    if (error.code === 'UNAUTHORIZED') {
+      setApiError(MESSAGES.ERROR.LOGIN);
+    } else {
+      setApiError(error.message || MESSAGES.ERROR.SERVER);
+    }
+    
+    console.error('Erreur de connexion:', error);
+  }
 };
 
 
@@ -150,7 +175,15 @@ const handleSubmit = (e) => {
               <p className="text-gray-600">Connectez-vous à votre compte pour continuer</p>
             </div>
 
-            <div className="space-y-6">
+    <div className="space-y-6">
+              {/* Affichage des erreurs API */}
+              {apiError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                  <span className="text-red-700 text-sm">{apiError}</span>
+                </div>
+              )}
+
               {/* Email Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
