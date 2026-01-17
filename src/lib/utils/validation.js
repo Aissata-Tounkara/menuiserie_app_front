@@ -5,7 +5,7 @@ export const validateEmail = (email) => {
     if (!email || !email.trim()) {
         return { valid: false, message: 'L\'email est requis' };
     }
-    const regex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    const regex = /^\d{8}$/; // Simple regex pour 8 chiffres
     if (!regex.test(email.trim())) {
         return { valid: false, message: 'Format d\'email invalide' };
     }

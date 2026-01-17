@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Plus, User, TrendingUp, ShoppingCart, 
-  Phone, Mail, MapPin, Search, Eye, Edit2, Trash2 
+  Phone, Mail, MapPin, Search, Eye, Edit2, Trash2, AlertCircle
 } from 'lucide-react';
 
 // Import de vos composants réutilisables
@@ -12,41 +12,58 @@ import Modal from './components/ui/Modal';
 import Form from './components/ui/Form';
 import Button from './components/ui/Button';
 
+// Import du store et utils
+import { useClientsStore } from './lib/store/clientsStore';
+import { MESSAGES } from './lib/utils/constants';
+
 const GestionClients = () => {
-  // --- ÉTATS ---
+  // --- ZUSTAND STORE ---
+  const { 
+    clients, 
+    loading, 
+    error,
+    pagination,
+    stats,
+    fetchClients, 
+    fetchClient,
+    createClient, 
+    updateClient, 
+    deleteClient,
+    fetchStats,
+    searchClients,
+    clearError
+  } = useClientsStore();
+
+  // --- ÉTATS LOCAUX ---
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('add'); // 'add', 'edit', 'view'
   const [selectedClient, setSelectedClient] = useState(null);
+  const [submitLoading, setSubmitLoading] = useState(false);
   
-  const [formData, setFormData] = useState({
-    nom: '', prenom: '', telephone: '', email: '',
-    adresse: '', ville: '', typeClient: 'Particulier'
-  });
+// Initialisation complète pour éviter l'erreur "uncontrolled"
+  const initialFormState = {
+    nom: '', 
+    prenom: '', 
+    telephone: '', 
+    email: '',
+    adresse: '', 
+    ville: '', 
+    code_postal: '', // Ajouté
+    type_client: 'Particulier', // Valeur par défaut de la migration
+    statut: 'Actif', // Valeur par défaut de la migration
+    date_inscription: new Date().toISOString().split('T')[0] // Requis par la migration (non nullable)
+  };
 
-  // --- DONNÉES (Simulées) ---
-  const [clients] = useState([
-    {
-      id: 1, nom: 'Benali', prenom: 'Ahmed', telephone: '0555 123 456',
-      email: 'ahmed.benali@email.dz', adresse: '15 Rue des Martyrs',
-      ville: 'Oran', typeClient: 'Particulier', dateInscription: '15/03/2024',
-      nombreCommandes: 8, totalAchats: 485000, statut: 'Actif'
-    },
-    {
-      id: 2, nom: 'Meziane', prenom: 'Karim', telephone: '0770 345 678',
-      email: 'karim.meziane@email.dz', adresse: '8 Blvd de la Liberté',
-      ville: 'Oran', typeClient: 'Entreprise', dateInscription: '10/01/2024',
-      nombreCommandes: 15, totalAchats: 1250000, statut: 'Actif'
-    },
-    {
-      id: 3, nom: 'SARL Construction', prenom: 'Direction', telephone: '0550 11 22 33',
-      email: 'contact@sarl-c.dz', adresse: 'Zone Industrielle',
-      ville: 'Arzew', typeClient: 'Entreprise', dateInscription: '05/11/2023',
-      nombreCommandes: 25, totalAchats: 3500000, statut: 'Actif'
-    }
-  ]);
+  const [formData, setFormData] = useState(initialFormState);
 
-  // --- ACTIONS POUR LE TABLEAU ---
+  // --- EFFET: Charger les données au montage ---
+  useEffect(() => {
+    fetchClients(1);
+    fetchStats();
+  }, [fetchClients, fetchStats]);
+
+  // --- GESTION DES ACTIONS DU TABLEAU ---
   const actions = [
     {
       icon: <Eye className="w-4 h-4" />,
@@ -60,12 +77,7 @@ const GestionClients = () => {
     },
     {
       icon: <Trash2 className="w-4 h-4" />,
-      onClick: (row) => {
-        if (window.confirm(`Confirmer la suppression de ${row.prenom} ${row.nom} ?`)) {
-          // Logique de suppression ici (API, etc.)
-          console.log('Supprimer client:', row.id);
-        }
-      },
+      onClick: (row) => handleDeleteClient(row),
       className: 'bg-red-100 text-red-600 hover:bg-red-200'
     }
   ];
@@ -115,13 +127,23 @@ const GestionClients = () => {
     },
     {
       header: 'Total Achats',
-      key: 'totalAchats',
-      render: (_, row) => (
-        <div>
-          <div className="font-semibold text-gray-900">{row.totalAchats.toLocaleString()} FCFA</div>
-          <div className="text-xs text-gray-500">{row.nombreCommandes} commandes</div>
-        </div>
-      )
+      key: 'total_achats',
+      render: (_, row) => {
+        // Sécurisation : on force à 0 si la valeur est undefined ou null
+        const total = row.total_achats ?? 0;
+        const nbCommandes = row.nombre_commandes ?? 0;
+
+        return (
+          <div>
+            <div className="font-semibold text-gray-900">
+              {Number(total).toLocaleString()} FCFA
+            </div>
+            <div className="text-xs text-gray-500">
+              {nbCommandes} commandes
+            </div>
+          </div>
+        );
+      }
     },
     {
       header: 'Statut',
@@ -131,28 +153,49 @@ const GestionClients = () => {
   ];
 
   // --- CONFIGURATION DU FORMULAIRE ---
-  const formFields = [
-    { name: 'nom', label: 'Nom', required: true },
-    { name: 'prenom', label: 'Prénom', required: true },
-    { name: 'telephone', label: 'Téléphone', required: true },
-    { name: 'email', label: 'Email', type: 'email', required: true },
-    { name: 'adresse', label: 'Adresse complète' },
-    { name: 'ville', label: 'Ville' },
-    { 
-      name: 'typeClient', 
-      label: 'Type de Client', 
-      type: 'select', 
-      options: [
-        { label: 'Particulier', value: 'Particulier' },
-        { label: 'Entreprise', value: 'Entreprise' }
-      ] 
-    }
-  ];
+const formFields = [
+  { name: 'nom', label: 'Nom', required: true },
+  { name: 'prenom', label: 'Prénom', required: true },
+  { name: 'telephone', label: 'Téléphone', required: true },
+  { name: 'email', label: 'Email', type: 'email', required: true },
+  { name: 'adresse', label: 'Adresse complète', required: true },
+  { name: 'ville', label: 'Ville', required: true },
+  { 
+    name: 'code_postal', 
+    label: 'Boîte Postale (ex: BP 1234)', 
+    placeholder: 'BP 0000',
+    required: true 
+  },
+  { 
+    name: 'type_client', 
+    label: 'Type de client', 
+    type: 'select', 
+    required: true,
+    options: [
+      { label: 'Particulier', value: 'Particulier' },
+      { label: 'Professionnel', value: 'Professionnel' }
+    ] 
+  },
+  { 
+    name: 'statut', 
+    label: 'Statut', 
+    type: 'select', 
+    options: [
+      { label: 'Actif', value: 'Actif' },
+      { label: 'Inactif', value: 'Inactif' },
+      { label: 'VIP', value: 'VIP' }
+    ] 
+  }
+];
 
   // --- LOGIQUE FILTRAGE ---
   const filteredClients = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return clients;
+    }
     return clients.filter(c => 
-      `${c.nom} ${c.prenom} ${c.email} ${c.ville}`.toLowerCase().includes(searchTerm.toLowerCase())
+      `${c.nom || ''} ${c.prenom || ''} ${c.email || ''} ${c.ville || ''}`.toLowerCase()
+        .includes(searchTerm.toLowerCase())
     );
   }, [searchTerm, clients]);
 
@@ -161,22 +204,70 @@ const GestionClients = () => {
     setModalMode(mode);
     setSelectedClient(client);
     if (client && (mode === 'edit' || mode === 'view')) {
-      setFormData({ ...client });
+      setFormData({ 
+        nom: client.nom || '', 
+        prenom: client.prenom || '', 
+        telephone: client.telephone || '', 
+        email: client.email || '', 
+        adresse: client.adresse || '', 
+        ville: client.ville || '', 
+        code_postal: client.codePostal || '', // Ajouté
+        type_client: client.typeClient || 'Particulier', // Ajouté
+        statut: client.statut || 'Actif',
+        date_inscription: client.date_inscription || new Date().toISOString().split('T')[0]
+      });
     } else {
-      setFormData({ nom: '', prenom: '', telephone: '', email: '', adresse: '', ville: '', typeClient: 'Particulier' });
+      setFormData(initialFormState); // Utiliser l'objet complet définit plus haut
     }
+    clearError();
     setShowModal(true);
   };
 
   const handleFormChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
-    console.log("Données soumises:", formData);
-    // Ici, appel API POST/PUT
-    setShowModal(false);
+    setSubmitLoading(true);
+
+    try {
+      if (modalMode === 'add') {
+        await createClient(formData);
+      } else if (modalMode === 'edit') {
+        await updateClient(selectedClient.id, formData);
+      }
+      setShowModal(false);
+      // Recharger la liste
+      fetchClients(1);
+    } catch (err) {
+      console.error('Erreur lors de la sauvegarde:', err);
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const handleDeleteClient = async (client) => {
+    if (window.confirm(`Confirmer la suppression de ${client.prenom} ${client.nom} ?`)) {
+      try {
+        await deleteClient(client.id);
+        // Recharger la liste
+        fetchClients(1);
+      } catch (err) {
+        console.error('Erreur lors de la suppression:', err);
+      }
+    }
+  };
+
+  const handleSearch = (e) => {
+    const query = e.target.value;
+    setSearchTerm(query);
+    if (query.trim()) {
+      searchClients(query);
+    } else {
+      fetchClients(1);
+    }
   };
 
   return (
@@ -205,12 +296,43 @@ const GestionClients = () => {
 
       <main className="p-6 max-w-7xl mx-auto space-y-6">
         
+        {/* AFFICHAGE DES ERREURS API */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+            <div>
+              <p className="text-red-700 font-medium">Erreur</p>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </div>
+        )}
+
         {/* STATS */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard label="Total Clients" value={clients.length} icon={User} iconColor="bg-blue-600" />
-          <StatCard label="Commandes" value="48" icon={ShoppingCart} iconColor="bg-orange-500" />
-          <StatCard label="Chiffre d'affaires" value="5.2M Fcfa" icon={TrendingUp} iconColor="bg-green-600" />
-          <StatCard label="Nouveaux (30j)" value="+5" icon={Plus} iconColor="bg-purple-600" />
+          <StatCard 
+            label="Total Clients" 
+            value={clients.length || 0} 
+            icon={User} 
+            iconColor="bg-blue-600" 
+          />
+          <StatCard 
+            label="Commandes" 
+            value={stats?.totalOrders || 0} 
+            icon={ShoppingCart} 
+            iconColor="bg-orange-500" 
+          />
+          <StatCard 
+            label="Chiffre d'affaires" 
+            value={stats ? `${(stats.total_achats / 1000000).toFixed(2)} Fcfa` : '0 Fcfa'} 
+            icon={TrendingUp} 
+            iconColor="bg-green-600" 
+          />
+          <StatCard 
+            label="Nouveaux (30j)" 
+            value={stats?.newClientsMonth || 0} 
+            icon={Plus} 
+            iconColor="bg-purple-600" 
+          />
         </div>
 
         {/* BARRE DE RECHERCHE */}
@@ -222,18 +344,26 @@ const GestionClients = () => {
               placeholder="Rechercher par nom, email ou ville..."
               className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearch}
+              disabled={loading}
             />
           </div>
         </div>
 
         {/* TABLEAU */}
-        <DataTable 
-          columns={columns}
-          data={filteredClients}
-          actions={actions}
-          itemsPerPage={5}
-        />
+        {loading && !searchTerm ? (
+          <div className="bg-white p-8 rounded-xl text-center">
+            <div className="animate-spin inline-block w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full"></div>
+            <p className="mt-4 text-gray-500">Chargement des clients...</p>
+          </div>
+        ) : (
+          <DataTable 
+            columns={columns}
+            data={filteredClients}
+            actions={actions}
+            itemsPerPage={10}
+          />
+        )}
       </main>
 
       {/* MODAL (Ajout / Modification / Vue) */}
@@ -249,11 +379,11 @@ const GestionClients = () => {
           <div className="space-y-6">
             <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
               <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                {selectedClient?.prenom.charAt(0)}{selectedClient?.nom.charAt(0)}
+                {selectedClient?.prenom?.charAt(0)}{selectedClient?.nom?.charAt(0)}
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-900">{selectedClient?.prenom} {selectedClient?.nom}</h3>
-                <p className="text-gray-500 uppercase text-xs font-bold tracking-wider">{selectedClient?.typeClient}</p>
+                <p className="text-gray-500 uppercase text-xs font-bold tracking-wider">{selectedClient?.statut || 'Actif'}</p>
               </div>
             </div>
 
@@ -283,6 +413,7 @@ const GestionClients = () => {
             onSubmit={handleFormSubmit}
             onCancel={() => setShowModal(false)}
             submitLabel={modalMode === 'add' ? "Créer le client" : "Mettre à jour"}
+            isLoading={submitLoading}
           />
         )}
       </Modal>
