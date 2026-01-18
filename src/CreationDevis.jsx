@@ -81,10 +81,15 @@ export default function CreationDevis() {
 
   const [newClientData, setNewClientData] = useState({
     nom: '',
+    prenom: '',
     telephone: '',
     email: '',
+    adresse: '',
     ville: '',
-    adresse: ''
+    code_postal: '',
+    type_client: 'Particulier',
+    statut: 'Actif',
+    date_inscription: new Date().toISOString().split('T')[0]
   });
   // === LOGIQUE MÉTIER ===
   const calculatePrix = (produit, largeur, hauteur) => {
@@ -172,7 +177,7 @@ export default function CreationDevis() {
       // Préparer les données du devis
       const devisData = {
         client_id: selectedClient.id || selectedClient.id,
-        date_emission: formatDateToDDMMYYYY(devisInfo.dateEmission),
+        date_emission: devisInfo.dateEmission,
         statut: 'Brouillon',
         validite: parseInt(devisInfo.validite),
         delai_livraison: devisInfo.delaiLivraison,
@@ -198,9 +203,13 @@ export default function CreationDevis() {
       console.log('Données envoyées au backend:', devisData);
 
       // Créer le devis via l'API
-      const createdDevis = await createDevis(devisData);
-      // Afficher le succès
-      alert(`Devis créé avec succès (ID: ${createdDevis.id}).`);
+     // Remplacez votre bloc de succès par celui-ci :
+const createdDevis = await createDevis(devisData);
+
+// On cherche l'ID dans createdDevis ou createdDevis.data
+const devisId = createdDevis?.id || createdDevis?.data?.id;
+
+alert(`Devis créé avec succès (ID: ${devisId}).`);
 
       // Redirection vers la gestion des devis
       navigate('/gestion-devis');
@@ -244,13 +253,72 @@ export default function CreationDevis() {
   };
 
   const handleAddNewClient = async () => {
-  // À implémenter plus tard : appel API pour créer client
-  alert('Fonctionnalité à implémenter');
+    try {
+      setSubmitLoading(true);
+      
+      // Valider les champs requis (même que GestionClients)
+      if (!newClientData.nom || !newClientData.prenom || !newClientData.telephone || !newClientData.email || !newClientData.adresse || !newClientData.ville || !newClientData.code_postal) {
+        alert('Veuillez remplir tous les champs requis');
+        setSubmitLoading(false);
+        return;
+      }
+      
+      // Créer le client via le store
+      const createdClient = await useClientsStore.getState().createClient(newClientData);
+      
+      // 🔥 FIX: Construire l'objet client avec TOUTES les données du formulaire
+      const clientToSelect = {
+        id: createdClient.id || createdClient.data?.id,
+        nom: newClientData.nom,
+        prenom: newClientData.prenom,
+        telephone: newClientData.telephone,
+        email: newClientData.email,
+        adresse: newClientData.adresse,
+        ville: newClientData.ville,
+        code_postal: newClientData.code_postal,
+        type_client: newClientData.type_client,
+        statut: newClientData.statut,
+        // Fusionner avec les données du serveur (au cas où)
+        ...createdClient,
+        ...createdClient.data
+      };
+      
+      console.log('Client créé et sélectionné:', clientToSelect);
+      
+      // Sélectionner automatiquement le client créé
+      setSelectedClient(clientToSelect);
+      
+      // Réinitialiser le formulaire
+      setNewClientData({ 
+        nom: '',
+        prenom: '',
+        telephone: '',
+        email: '',
+        adresse: '',
+        ville: '',
+        code_postal: '',
+        type_client: 'Particulier',
+        statut: 'Actif',
+        date_inscription: new Date().toISOString().split('T')[0]
+      });
+      setShowClientModal(false);
+      
+      alert('Client créé avec succès !');
+    } catch (error) {
+      console.error('Erreur complète lors de la création du client:', error);
 
-  // Réinitialiser le formulaire
-  setNewClientData({ nom: '', telephone: '', email: '', ville: '', adresse: '' });
-  setShowClientModal(false);
-};
+      // Afficher les erreurs de validation du serveur
+      if (error.errors) {
+        const firstField = Object.keys(error.errors)[0];
+        const firstMessage = error.errors[firstField][0];
+        alert(`Erreur de validation : ${firstMessage}`);
+      } else {
+        alert('Erreur : ' + (error.message || 'Impossible de créer le client'));
+      }
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
   // === RENDU ===
   return (
     <div className="min-h-screen bg-gray-50">
@@ -685,10 +753,37 @@ export default function CreationDevis() {
   <Form
     fields={[
       { name: 'nom', label: 'Nom', required: true },
+      { name: 'prenom', label: 'Prénom', required: true },
       { name: 'telephone', label: 'Téléphone', required: true },
-      { name: 'email', label: 'Email', type: 'email' },
+      { name: 'email', label: 'Email', type: 'email', required: true },
+      { name: 'adresse', label: 'Adresse complète', required: true, fullWidth: true },
       { name: 'ville', label: 'Ville', required: true },
-      { name: 'adresse', label: 'Adresse', required: true, fullWidth: true }
+      { 
+        name: 'code_postal', 
+        label: 'Boîte Postale (ex: BP 1234)', 
+        placeholder: 'BP 0000',
+        required: true 
+      },
+      { 
+        name: 'type_client', 
+        label: 'Type de client', 
+        type: 'select', 
+        required: true,
+        options: [
+          { label: 'Particulier', value: 'Particulier' },
+          { label: 'Professionnel', value: 'Professionnel' }
+        ] 
+      },
+      { 
+        name: 'statut', 
+        label: 'Statut', 
+        type: 'select', 
+        options: [
+          { label: 'Actif', value: 'Actif' },
+          { label: 'Inactif', value: 'Inactif' },
+          { label: 'VIP', value: 'VIP' }
+        ] 
+      }
     ]}
     formData={newClientData}
     onChange={handleClientFormChange}

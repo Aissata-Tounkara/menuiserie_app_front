@@ -73,9 +73,9 @@ export const useDevisStore = create((set, get) => ({
     },
 
     /**
-     * Récupérer un devis spécifique
+     * Récupérer un devis spécifique par ID
      */
-    fetchDevis: async (id) => {
+    fetchDevisById: async (id) => {
         set({ loading: true, error: null });
         try {
             const devis = await devisService.getDevis(id);
