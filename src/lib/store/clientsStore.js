@@ -280,5 +280,13 @@ export const useClientsStore = create((set, get) => ({
     /**
      * Réinitialiser les erreurs
      */
+    
     clearError: () => set({ error: null }),
+     // 🔹 AJOUTE CETTE ACTION ICI 🔹
+    /**
+     * Ajouter un client à la liste locale (ex: après création via modal)
+     */
+    addClient: (client) => set((state) => ({
+      clients: [client, ...state.clients]
+    })),
 }));

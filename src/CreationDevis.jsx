@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search, Plus, Trash2, Save, X, User, Phone, Mail, MapPin,
-  Calculator, FileText, Calendar, Percent, CheckCircle
+  Calculator, FileText, Calendar, Percent, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { Link, useNavigate } from "react-router-dom";
 
@@ -13,11 +13,22 @@ import Button from './components/ui/Button';
 import Modal from './components/ui/Modal';
 import Form from './components/ui/Form';
 
+// Import des stores et utils
+import { useDevisStore } from './lib/store/devisStore';
+import { useClientsStore } from './lib/store/clientsStore';
+import { MESSAGES } from './lib/utils/constants';
+
 export default function CreationDevis() {
+  // --- ZUSTAND STORES ---
+  const { createDevis, validateAndInvoice, error: devisError, clearError: clearDevisError } = useDevisStore();
+  const { clients, loading: clientsLoading, fetchClients } = useClientsStore();
+
+  // --- ÉTATS LOCAUX ---
   const [selectedClient, setSelectedClient] = useState(null);
   const [searchClient, setSearchClient] = useState('');
   const [showClientModal, setShowClientModal] = useState(false);
   const [lignesDevis, setLignesDevis] = useState([]);
+  const [submitLoading, setSubmitLoading] = useState(false);
   const [currentLigne, setCurrentLigne] = useState({
     produit: '',
     categorie: '',
@@ -32,13 +43,11 @@ export default function CreationDevis() {
 
   const navigate = useNavigate();
 
-  // Données statiques
-  const clients = [
-    { id: 1, nom: 'Ahmed Benali', tel: '0555 123 456', email: 'ahmed.b@email.dz', adresse: 'Cité 20 Août, Oran' },
-    { id: 2, nom: 'Fatima Kader', tel: '0661 234 567', email: 'fatima.k@email.dz', adresse: 'Hai Es-Salam, Oran' },
-    { id: 3, nom: 'Karim Meziane', tel: '0770 345 678', email: 'karim.m@email.dz', adresse: 'Les Amandiers, Oran' },
-    { id: 4, nom: 'Leila Sahraoui', tel: '0555 456 789', email: 'leila.s@email.dz', adresse: 'Bir El Djir, Oran' }
-  ];
+  // --- EFFET: Charger les clients au montage ---
+  useEffect(() => {
+    fetchClients(1);
+    clearDevisError();
+  }, [fetchClients, clearDevisError]);
 
   const categories = [
     { id: 1, nom: 'Fenêtres', produits: ['Fenêtre Coulisant', 'Fenêtre toilette'] },
@@ -70,6 +79,13 @@ export default function CreationDevis() {
     conditionsPaiement: 'Paiement à la livraison'
   });
 
+  const [newClientData, setNewClientData] = useState({
+    nom: '',
+    telephone: '',
+    email: '',
+    ville: '',
+    adresse: ''
+  });
   // === LOGIQUE MÉTIER ===
   const calculatePrix = (produit, largeur, hauteur) => {
     if (!largeur || !hauteur) return 0;
@@ -86,6 +102,13 @@ export default function CreationDevis() {
     const prixBase = surface * PRIX_ALU_M2;
     return Math.round(prixBase + prixBase * TAUX_MAJORATION);
   };
+  const formatDateToDDMMYYYY = (isoDate) => {
+  const d = new Date(isoDate);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
 
   const ajouterLigne = () => {
     if (currentLigne.produit && (currentLigne.produit === 'Installation et pose' || (currentLigne.largeur && currentLigne.hauteur))) {
@@ -110,6 +133,14 @@ export default function CreationDevis() {
       });
     }
   };
+  //pour la gestion du formulaire du nouveau client
+  const handleClientFormChange = (event) => {
+  const { name, value } = event.target;
+  setNewClientData(prev => ({
+    ...prev,
+    [name]: value
+  }));
+};
 
   const supprimerLigne = (id) => setLignesDevis(lignesDevis.filter(l => l.id !== id));
 
@@ -126,90 +157,114 @@ export default function CreationDevis() {
     return date.toLocaleDateString('fr-FR');
   };
 
-  const filteredClients = clients.filter(client =>
-    client.nom.toLowerCase().includes(searchClient.toLowerCase()) ||
-    client.tel.includes(searchClient)
+  const filteredClients = (clients || []).filter(client =>
+    (client.nom || '').toLowerCase().includes(searchClient.toLowerCase()) ||
+    (client.telephone || client.tel || '').includes(searchClient)
   );
 
   // === SAUVEGARDE ===
-  const saveDevisAndConvert = () => {
+  const saveDevisAndConvert = async () => {
     if (!selectedClient || lignesDevis.length === 0) return;
-    const id = Date.now();
-    const devis = {
-      id,
-      client: selectedClient,
-      info: devisInfo,
-      lignes: lignesDevis,
-      totals: {
-        sousTotal: calculerSousTotal(),
-        remise: calculerRemise(),
-        totalHT: calculerTotalHT(),
-        ttc: calculerTotalTTC(),
-        acompte: calculerAcompte()
-      },
-      dateCreation: new Date().toISOString()
-    };
 
-    // Sauvegarde devis
-    const storedDevis = JSON.parse(localStorage.getItem('devis') || '[]');
-    storedDevis.push(devis);
-    localStorage.setItem('devis', JSON.stringify(storedDevis));
+    setSubmitLoading(true);
 
-    // Conversion en commande
-    const articles = lignesDevis.map(l => ({
-      produit: l.produit,
-      quantite: l.quantite,
-      dimensions: l.largeur && l.hauteur ? `${l.largeur}m × ${l.hauteur}m` : l.description || '',
-      prix: l.prixUnitaire
-    }));
-    const commande = {
-      id: `CMD-${id}`,
-      client: selectedClient,
-      dateCommande: devisInfo.dateEmission,
-      dateLivraison: getDateValidite(),
-      statut: 'En attente',
-      montantHT: calculerTotalHT(),
-      montantTTC: calculerTotalTTC(),
-      articles,
-      notes: `Créée depuis devis ${id}`
-    };
-    const storedCommandes = JSON.parse(localStorage.getItem('commandes') || '[]');
-    storedCommandes.push(commande);
-    localStorage.setItem('commandes', JSON.stringify(storedCommandes));
+    try {
+      // Préparer les données du devis
+      const devisData = {
+        client_id: selectedClient.id || selectedClient.id,
+        date_emission: formatDateToDDMMYYYY(devisInfo.dateEmission),
+        statut: 'Brouillon',
+        validite: parseInt(devisInfo.validite),
+        delai_livraison: devisInfo.delaiLivraison,
+        conditions_paiement: devisInfo.conditionsPaiement,
+        remise_pourcentage: devisInfo.remise,
+        acompte_pourcentage: devisInfo.acompte,
+        lignes: lignesDevis.map(l => ({
+        produit: l.produit,
+        description: l.description || null,
+        largeur: l.largeur ? parseFloat(l.largeur) : null,
+        hauteur: l.hauteur ? parseFloat(l.hauteur) : null,
+        quantite: parseInt(l.quantite, 10),
+        prix_unitaire: parseFloat(l.prixUnitaire),
+        alluminium: l.Alluminium || null,
+        vitrage: l.vitrage || null
+      })),
+        montant_ht: calculerTotalHT(),
+        montant_ttc: calculerTotalTTC(),
+        notes: document.querySelector('textarea')?.value || ''
+      };
 
-    alert(`Devis enregistré (ID: ${id}) et converti en commande (${commande.id}).`);
-    navigate('/gestion-commandes', { state: { createdFromDevis: commande.id } });
-    setSelectedClient(null);
-    setLignesDevis([]);
+          // 🔍 Debug : afficher les données envoyées
+      console.log('Données envoyées au backend:', devisData);
+
+      // Créer le devis via l'API
+      const createdDevis = await createDevis(devisData);
+      // Afficher le succès
+      alert(`Devis créé avec succès (ID: ${createdDevis.id}).`);
+
+      // Redirection vers la gestion des devis
+      navigate('/gestion-devis');
+      
+      // Réinitialiser le formulaire
+      setSelectedClient(null);
+      setLignesDevis([]);
+      setDevisInfo({
+        dateEmission: new Date().toISOString().split('T')[0],
+        validite: 30,
+        remise: 0,
+        acompte: 0,
+        delaiLivraison: '2-3 semaines',
+        conditionsPaiement: 'Paiement à la livraison'
+      });
+
+    }  catch (error) {
+  console.error('Erreur complète:', error);
+
+  if (error.response) {
+    // Affiche les détails de validation dans la console
+    console.error('Réponse d’erreur du serveur:', error.response.data);
+
+    // Affiche un message plus précis à l’utilisateur
+    const errors = error.response.data.errors;
+    if (errors) {
+      const firstField = Object.keys(errors)[0];
+      const firstMessage = errors[firstField][0];
+      alert(`Erreur de validation : ${firstMessage}`);
+    } else {
+      alert('Erreur : ' + (error.response.data.message || 'Impossible de créer le devis'));
+    }
+  } else if (error.request) {
+    alert('Erreur réseau : le serveur ne répond pas');
+  } else {
+    alert('Erreur inattendue : ' + error.message);
+  }
+} finally {
+  setSubmitLoading(false);
+} 
   };
 
-  // === CONFIGURATION DU FORMULAIRE CLIENT MODAL ===
-  const clientFormFields = [
-    { name: 'nom', label: 'Nom', required: true },
-    { name: 'tel', label: 'Téléphone', required: true },
-    { name: 'email', label: 'Email', type: 'email' },
-    { name: 'ville', label: 'Ville', required: true },
-    { name: 'adresse', label: 'Adresse', required: true, fullWidth: true }
-  ];
+  const handleAddNewClient = async () => {
+  // À implémenter plus tard : appel API pour créer client
+  alert('Fonctionnalité à implémenter');
 
-  const [newClientData, setNewClientData] = useState({
-    nom: '', tel: '', email: '', ville: '', adresse: ''
-  });
-
-  const handleClientFormChange = (e) => {
-    const { name, value } = e.target;
-    setNewClientData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleAddNewClient = () => {
-    // TODO: intégrer avec backend ou localStorage
-    alert('Fonctionnalité à implémenter');
-    setShowClientModal(false);
-  };
-
+  // Réinitialiser le formulaire
+  setNewClientData({ nom: '', telephone: '', email: '', ville: '', adresse: '' });
+  setShowClientModal(false);
+};
   // === RENDU ===
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* AFFICHAGE DES ERREURS API */}
+      {devisError && (
+        <div className="fixed top-6 right-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3 z-50 max-w-md">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+          <div>
+            <p className="text-red-700 font-medium">Erreur</p>
+            <p className="text-red-600 text-sm">{devisError}</p>
+          </div>
+        </div>
+      )}
+
       {/* HEADER UNIFIÉ */}
       <Header
         title="Nouveau Devis"
@@ -234,7 +289,7 @@ export default function CreationDevis() {
             icon: <Save className="w-4 h-4" />,
             onClick: saveDevisAndConvert,
             variant: 'primary',
-            disabled: !selectedClient || lignesDevis.length === 0
+            disabled: !selectedClient || lignesDevis.length === 0 || submitLoading
           }
         ]}
       />
@@ -256,22 +311,29 @@ export default function CreationDevis() {
                     value={searchClient}
                     onChange={(e) => setSearchClient(e.target.value)}
                     icon={Search}
+                    disabled={clientsLoading}
                   />
                   {searchClient && (
                     <div className="mt-3 border border-gray-200 rounded-lg max-h-48 overflow-y-auto">
-                      {filteredClients.map(client => (
-                        <div
-                          key={client.id}
-                          onClick={() => {
-                            setSelectedClient(client);
-                            setSearchClient('');
-                          }}
-                          className="p-3 hover:bg-blue-50 cursor-pointer border-b last:border-0"
-                        >
-                          <div className="font-semibold text-gray-900">{client.nom}</div>
-                          <div className="text-sm text-gray-600">{client.tel} • {client.email}</div>
-                        </div>
-                      ))}
+                      {clientsLoading ? (
+                        <div className="p-4 text-center text-gray-500">Chargement...</div>
+                      ) : filteredClients.length > 0 ? (
+                        filteredClients.map(client => (
+                          <div
+                            key={client.id}
+                            onClick={() => {
+                              setSelectedClient(client);
+                              setSearchClient('');
+                            }}
+                            className="p-3 hover:bg-blue-50 cursor-pointer border-b last:border-0"
+                          >
+                            <div className="font-semibold text-gray-900">{client.nom}</div>
+                            <div className="text-sm text-gray-600">{client.telephone || client.tel} • {client.email}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-gray-500 text-sm">Aucun client trouvé</div>
+                      )}
                     </div>
                   )}
                   <Button
@@ -289,7 +351,7 @@ export default function CreationDevis() {
                     <div className="flex-1">
                       <div className="font-bold text-gray-900 text-lg mb-2">{selectedClient.nom}</div>
                       <div className="space-y-1 text-sm text-gray-700">
-                        <div className="flex items-center gap-2"><Phone className="w-4 h-4" /> {selectedClient.tel}</div>
+                        <div className="flex items-center gap-2"><Phone className="w-4 h-4" /> {selectedClient.telephone || selectedClient.tel}</div>
                         <div className="flex items-center gap-2"><Mail className="w-4 h-4" /> {selectedClient.email}</div>
                         <div className="flex items-center gap-2"><MapPin className="w-4 h-4" /> {selectedClient.adresse}</div>
                       </div>
@@ -577,9 +639,19 @@ export default function CreationDevis() {
                   fullWidth
                   variant="primary"
                   onClick={saveDevisAndConvert}
-                  disabled={!selectedClient || lignesDevis.length === 0}
+                  disabled={!selectedClient || lignesDevis.length === 0 || submitLoading}
+                  className={submitLoading ? 'opacity-70 cursor-not-allowed' : ''}
                 >
-                  <Save className="w-4 h-4" /> Enregistrer le devis
+                  {submitLoading ? (
+                    <>
+                      <div className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Enregistrement...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" /> Enregistrer le devis
+                    </>
+                  )}
                 </Button>
               
                 <Button
@@ -605,20 +677,26 @@ export default function CreationDevis() {
       </div>
 
       {/* MODAL NOUVEAU CLIENT */}
-      <Modal
-        isOpen={showClientModal}
-        title="Nouveau Client"
-        onClose={() => setShowClientModal(false)}
-      > 
-        <Form
-          fields={clientFormFields}
-          formData={newClientData}
-          onChange={handleClientFormChange}
-          onCancel={() => setShowClientModal(false)}
-          onSubmit={handleAddNewClient}
-          submitLabel="Ajouter le client"
-        />
-      </Modal>
+     <Modal
+  isOpen={showClientModal}
+  title="Nouveau Client"
+  onClose={() => setShowClientModal(false)}
+>
+  <Form
+    fields={[
+      { name: 'nom', label: 'Nom', required: true },
+      { name: 'telephone', label: 'Téléphone', required: true },
+      { name: 'email', label: 'Email', type: 'email' },
+      { name: 'ville', label: 'Ville', required: true },
+      { name: 'adresse', label: 'Adresse', required: true, fullWidth: true }
+    ]}
+    formData={newClientData}
+    onChange={handleClientFormChange}
+    onCancel={() => setShowClientModal(false)}
+    onSubmit={handleAddNewClient}
+    submitLabel="Ajouter le client"
+  />
+</Modal>
     </div>
   );
 }
