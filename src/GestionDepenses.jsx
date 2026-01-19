@@ -1,77 +1,137 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Plus, Trash2, Edit2, Download, FileText, Calendar, DollarSign, X } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Plus, Trash2, Edit2, Download, FileText, Calendar, DollarSign, X, Loader } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+// Store
+import { useDepensesStore } from './lib/store/depensesStore';
+
 export default function GestionDepenses() {
+  // Store hooks
+  const {
+    depenses,
+    depensesLoading,
+    depensesError,
+    depensesPagination,
+    depensesStats,
+    fetchDépenses,
+    fetchDépensesStats,
+    createDépense,
+    updateDépense,
+    deleteDépense,
+    searchDépenses,
+  } = useDepensesStore();
+
+  // Local state
   const [query, setQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [filterMonth, setFilterMonth] = useState('all');
   const [showLinks, setShowLinks] = useState(false);
+  const [formSubmitting, setFormSubmitting] = useState(false);
 
   const categories = ['Achat matériaux', 'Transport', 'Électricité', 'Maintenance', 'Autre'];
 
-  const [depenses, setDepenses] = useState([
-    { id: 1, categorie: 'Achat matériaux', description: 'Profilés aluminium', montant: 125000, date: '2024-11-05' },
-    { id: 2, categorie: 'Transport', description: 'Livraison chantier', montant: 15000, date: '2024-11-10' },
-    { id: 3, categorie: 'Électricité', description: 'Facture électricité atelier', montant: 45000, date: '2024-10-28' }
-  ]);
+  const [form, setForm] = useState({ 
+    categorie: categories[0], 
+    description: '', 
+    montant: '', 
+    date: new Date().toISOString().split('T')[0] 
+  });
 
-  const [form, setForm] = useState({ categorie: categories[0], description: '', montant: '', date: new Date().toISOString().split('T')[0] });
+  // Charger les dépenses au montage
+  useEffect(() => {
+    fetchDépenses(1);
+    fetchDépensesStats();
+  }, [fetchDépenses, fetchDépensesStats]);
 
-  const resetForm = () => setForm({ categorie: categories[0], description: '', montant: '', date: new Date().toISOString().split('T')[0] });
-
-  const handleAdd = () => {
-    if (!form.description.trim() || !form.montant) return alert('Veuillez remplir la description et le montant');
-    if (editing) {
-      setDepenses(depenses.map(d => d.id === editing ? { ...d, ...form, montant: parseFloat(form.montant) } : d));
-      setEditing(null);
+  // Gérer la recherche
+  useEffect(() => {
+    if (query.trim()) {
+      searchDépenses(query);
     } else {
-      const newItem = { id: Date.now(), ...form, montant: parseFloat(form.montant) };
-      setDepenses([newItem, ...depenses]);
+      fetchDépenses(1);
     }
-    resetForm();
-    setShowModal(false);
+  }, [query, searchDépenses, fetchDépenses]);
+
+  const resetForm = () => setForm({ 
+    categorie: categories[0], 
+    description: '', 
+    montant: '', 
+    date: new Date().toISOString().split('T')[0] 
+  });
+
+  const handleAdd = async () => {
+    if (!form.description.trim() || !form.montant) {
+      return alert('Veuillez remplir la description et le montant');
+    }
+
+    setFormSubmitting(true);
+    try {
+      if (editing) {
+        await updateDépense(editing, {
+          categorie: form.categorie,
+          description: form.description,
+          montant: parseFloat(form.montant),
+          date: form.date,
+        });
+        setEditing(null);
+      } else {
+        await createDépense({
+          categorie: form.categorie,
+          description: form.description,
+          montant: parseFloat(form.montant),
+          date: form.date,
+        });
+      }
+      resetForm();
+      setShowModal(false);
+      await fetchDépenses(1);
+      fetchDépensesStats();
+    } catch (error) {
+      alert(`Erreur: ${error.message}`);
+    } finally {
+      setFormSubmitting(false);
+    }
   };
 
   const handleEdit = (item) => {
     setEditing(item.id);
-    setForm({ categorie: item.categorie, description: item.description, montant: item.montant, date: item.date });
+    setForm({ 
+      categorie: item.categorie, 
+      description: item.description, 
+      montant: item.montant, 
+      date: item.date 
+    });
     setShowModal(true);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Supprimer cette dépense ?')) setDepenses(depenses.filter(d => d.id !== id));
+  const handleDelete = async (id) => {
+    if (window.confirm('Supprimer cette dépense ?')) {
+      try {
+        await deleteDépense(id);
+        fetchDépensesStats();
+      } catch (error) {
+        alert(`Erreur: ${error.message}`);
+      }
+    }
   };
 
   const filtered = useMemo(() => {
     return depenses.filter(d => {
-      const matchQuery = d.description.toLowerCase().includes(query.toLowerCase()) || d.categorie.toLowerCase().includes(query.toLowerCase());
+      const matchQuery = (d.description || '').toLowerCase().includes(query.toLowerCase()) || (d.categorie || '').toLowerCase().includes(query.toLowerCase());
       if (filterMonth === 'all') return matchQuery;
-      const month = d.date.slice(0,7); // YYYY-MM
+      const month = (d.date || '').slice(0,7); // YYYY-MM
       return matchQuery && month === filterMonth;
     });
   }, [depenses, query, filterMonth]);
 
   const totalMonth = useMemo(() => {
-    if (filterMonth === 'all') return depenses.reduce((s, d) => s + d.montant, 0);
-    return depenses.filter(d => d.date.slice(0,7) === filterMonth).reduce((s, d) => s + d.montant, 0);
+    if (filterMonth === 'all') return depenses.reduce((s, d) => s + (d.montant || 0), 0);
+    return depenses.filter(d => (d.date || '').slice(0,7) === filterMonth).reduce((s, d) => s + (d.montant || 0), 0);
   }, [depenses, filterMonth]);
 
-  const exportCSV = () => {
-    const rows = [['id','categorie','description','montant','date'], ...filtered.map(d => [d.id,d.categorie,d.description,d.montant,d.date])];
-    const csv = rows.map(r => r.map(c => '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `depenses_${filterMonth === 'all' ? 'all' : filterMonth}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const months = useMemo(() => {
-    const set = new Set(depenses.map(d => d.date.slice(0,7)));
+    const set = new Set(depenses.map(d => (d.date || '').slice(0,7)).filter(Boolean));
     return ['all', ...Array.from(set).sort((a,b)=>b.localeCompare(a))];
   }, [depenses]);
 
@@ -105,13 +165,21 @@ export default function GestionDepenses() {
             </div>
             <div className="flex items-center gap-3">
               <button onClick={() => { setShowModal(true); setEditing(null); resetForm(); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2"><Plus className="w-4 h-4" />Nouvelle dépense</button>
-              <button onClick={exportCSV} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 flex items-center gap-2"><Download className="w-4 h-4" />Export CSV</button>
+              <button onClick={() => alert('Export CSV')} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 flex items-center gap-2"><Download className="w-4 h-4" />Export CSV</button>
+              <button onClick={() => fetchDépenses(1)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700"><Loader className="w-4 h-4" /></button>
             </div>
           </div>
         </div>
       </header>
 
       <div className="p-6 max-w-7xl mx-auto">
+        {/* Afficher l'erreur si elle existe */}
+        {depensesError && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+            <p className="text-red-700">{depensesError}</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-4">
@@ -124,22 +192,31 @@ export default function GestionDepenses() {
 
             <div className="bg-white rounded-xl shadow-sm p-4">
               <h2 className="text-lg font-bold mb-3">Liste des dépenses</h2>
-              <div className="space-y-3">
-                {filtered.length === 0 && <div className="text-sm text-gray-500">Aucune dépense trouvée.</div>}
-                {filtered.map(d => (
-                  <div key={d.id} className="flex items-center justify-between border border-gray-100 rounded-lg p-3">
-                    <div>
-                      <div className="font-semibold text-gray-900">{d.categorie} • {d.description}</div>
-                      <div className="text-xs text-gray-500">{d.date}</div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-lg font-bold text-gray-900">{d.montant.toLocaleString()} FCFA</div>
-                      <button onClick={()=>handleEdit(d)} className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Edit2 className="w-4 h-4"/></button>
-                      <button onClick={()=>handleDelete(d.id)} className="p-2 bg-red-50 text-red-600 rounded-lg"><Trash2 className="w-4 h-4"/></button>
-                    </div>
+              {depensesLoading ? (
+                <div className="flex justify-center items-center h-40">
+                  <div className="flex items-center gap-2">
+                    <Loader className="w-5 h-5 animate-spin text-blue-500" />
+                    <p>Chargement des dépenses...</p>
                   </div>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filtered.length === 0 && <div className="text-sm text-gray-500">Aucune dépense trouvée.</div>}
+                  {filtered.map(d => (
+                    <div key={d.id} className="flex items-center justify-between border border-gray-100 rounded-lg p-3">
+                      <div>
+                        <div className="font-semibold text-gray-900">{d.categorie || '-'} • {d.description || '-'}</div>
+                        <div className="text-xs text-gray-500">{d.date || '-'}</div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-lg font-bold text-gray-900">{parseFloat(d.montant || 0).toLocaleString()} DA</div>
+                        <button onClick={()=>handleEdit(d)} className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Edit2 className="w-4 h-4"/></button>
+                        <button onClick={()=>handleDelete(d.id)} className="p-2 bg-red-50 text-red-600 rounded-lg"><Trash2 className="w-4 h-4"/></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -147,7 +224,7 @@ export default function GestionDepenses() {
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-bold mb-3">Résumé</h2>
               <div className="space-y-3">
-                <div className="flex justify-between text-sm"><span>Total sélection:</span><span className="font-semibold">{totalMonth.toLocaleString()} FCFA</span></div>
+                <div className="flex justify-between text-sm"><span>Total sélection:</span><span className="font-semibold">{totalMonth.toLocaleString()} DA</span></div>
                 <div className="flex justify-between text-sm"><span>Nombre de lignes:</span><span className="font-semibold">{filtered.length}</span></div>
               </div>
             </div>
@@ -192,7 +269,8 @@ export default function GestionDepenses() {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <button onClick={handleAdd} className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 font-semibold">
+                <button onClick={handleAdd} disabled={formSubmitting} className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
+                  {formSubmitting && <Loader className="w-4 h-4 animate-spin" />}
                   {editing ? 'Enregistrer' : 'Ajouter'}
                 </button>
                 <button onClick={() => { resetForm(); setShowModal(false); setEditing(null); }} className="flex-1 border border-gray-300 px-4 py-3 rounded-lg hover:bg-gray-50 font-semibold">

@@ -1,27 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Users, Package, ShoppingCart, AlertCircle, CheckCircle, Clock, DollarSign 
+  Users, Package, ShoppingCart, AlertCircle, CheckCircle, Clock, DollarSign, Loader, RefreshCw
 } from 'lucide-react';
 
 // Import des composants
 import Header from './components/layout/Header';
 import StatCard from './components/ui/Cards';
-import DataTable from './components/tables/DataTable'; // Chemin à adapter si nécessaire
+import DataTable from './components/tables/DataTable';
+
+// Store
+import { useDashboardStore } from './lib/store/dashboardStore';
 
 export default function Dashboard() {
-  const [selectedPeriod, setSelectedPeriod] = useState('mois');
+  // Store hooks
+  const {
+    dashboardStats,
+    dashboardLoading,
+    dashboardError,
+    selectedPeriod,
+    fetchAllDashboardData,
+    fetchStatsByPeriod,
+    setPeriod,
+  } = useDashboardStore();
 
-  // Données des commandes récentes
-  const recentOrders = [
-    { id: 'CMD-001', client: 'Ahmed Benali', produit: 'Fenêtre coulissante', montant: 45000, statut: 'En production', date: '12/01/2026' },
-    { id: 'CMD-002', client: 'Ahmed Benali', produit: 'Fenêtre toilette', montant: 37500, statut: 'En production', date: '12/01/2026' },
-    { id: 'CMD-003', client: 'Fatima Kader', produit: 'Porte 2Battan', montant: 78500, statut: 'Livrée', date: '13/01/2026' },
-    { id: 'CMD-004', client: 'Karim Meziane', produit: 'Porte 1Battan', montant: 32000, statut: 'En attente', date: '06/02/2026' },
-    { id: 'CMD-005', client: 'Leila Sahraoui', produit: 'Porte toilette', montant: 95000, statut: 'En production', date: '07/11/2026' },
-    { id: 'CMD-006', client: 'Omar Sy', produit: 'Baie Vitrée', montant: 120000, statut: 'En attente', date: '08/02/2026' },
-  ];
+  // Local state
+  const [recentOrders, setRecentOrders] = useState([]);
 
-  const totalRevenus = recentOrders.reduce((total, order) => total + order.montant, 0);
+  // Charger les données au montage
+  useEffect(() => {
+    fetchAllDashboardData();
+  }, [fetchAllDashboardData]);
+
+  // Charger les stats quand la période change
+  useEffect(() => {
+    if (selectedPeriod !== 'mois') {
+      const periodMap = {
+        'semaine': 'week',
+        'mois': 'month',
+        'trimestre': 'quarter',
+        'annee': 'year'
+      };
+      fetchStatsByPeriod(periodMap[selectedPeriod] || 'month');
+    }
+  }, [selectedPeriod, fetchStatsByPeriod]);
 
   // Configuration des colonnes — compatible avec le nouveau DataTable
   const columns = [
@@ -83,7 +104,7 @@ export default function Dashboard() {
 
   const selectConfig = {
     value: selectedPeriod,
-    onChange: (e) => setSelectedPeriod(e.target.value),
+    onChange: (e) => setPeriod(e.target.value),
     options: [
       { value: 'semaine', label: 'Cette semaine' },
       { value: 'mois', label: 'Ce mois' },
@@ -92,81 +113,128 @@ export default function Dashboard() {
     ]
   };
 
+  // Données des stats basées sur l'API
+  const totalRevenus = dashboardStats?.total_revenue || 0;
+  const totalClients = dashboardStats?.total_clients || 0;
+  const totalProducts = dashboardStats?.total_products || 0;
+  const totalOrders = dashboardStats?.total_orders || 0;
+  const stockAlerts = dashboardStats?.stock_alerts || 0;
+  const pendingQuotes = dashboardStats?.pending_quotes || 0;
+  const readyDeliveries = dashboardStats?.ready_deliveries || 0;
+
   const statsData = [
-    { icon: ShoppingCart, value: recentOrders.length, label: 'Commandes du mois', iconColor: 'bg-blue-500' },
-    { icon: DollarSign, value: `${totalRevenus.toLocaleString('fr-FR')} FCFA`, label: 'Revenus', iconColor: 'bg-green-500' },
-    { icon: Users, value: 128, label: 'Clients actifs', iconColor: 'bg-purple-500' },
-    { icon: Package, value: 156, label: 'Produits', iconColor: 'bg-orange-500' }
+    { icon: ShoppingCart, value: totalOrders, label: 'Commandes du mois', iconColor: 'bg-blue-500' },
+    { icon: DollarSign, value: `${totalRevenus.toLocaleString('fr-FR')} DA`, label: 'Revenus', iconColor: 'bg-green-500' },
+    { icon: Users, value: totalClients, label: 'Clients actifs', iconColor: 'bg-purple-500' },
+    { icon: Package, value: totalProducts, label: 'Produits', iconColor: 'bg-orange-500' }
   ];
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Afficher l'erreur si elle existe */}
+      {dashboardError && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 m-4">
+          <p className="text-red-700">{dashboardError}</p>
+        </div>
+      )}
+
       <Header
         title="Menuiserie Aluminium"
-        subtitle="Gestion des commandes et production"
+        subtitle={dashboardLoading ? "Chargement..." : "Gestion des commandes et production"}
         navigationLinks={navigationLinks}
         selectAction={selectConfig}
         userAvatar="A"
         userName="Admin"
+        actions={[
+          {
+            label: 'Rafraîchir',
+            icon: <RefreshCw className="w-4 h-4" />,
+            onClick: () => fetchAllDashboardData(),
+            variant: 'secondary'
+          }
+        ]}
       />
 
       <div className="p-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          {statsData.map((stat, index) => (
-            <StatCard
-              key={index}
-              icon={stat.icon}
-              value={stat.value}
-              label={stat.label}
-              iconColor={stat.iconColor}
-            />
-          ))}
-        </div>
-
-        {/* Recent Orders avec DataTable */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">Commandes récentes</h2>
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">Voir tout →</button>
-            </div>
-
-            {/* Utilisation directe de DataTable */}
-            <DataTable 
-              columns={columns}
-              data={recentOrders}
-              itemsPerPage={5} // Affiche 5 commandes par page
-            />
-          </div>
-
-          {/* Alerts Section */}
-          <div className="lg:col-span-1">
-            <div className="space-y-4">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
-                <div>
-                  <h3 className="font-semibold text-yellow-900 text-sm">Stock faible</h3>
-                  <p className="text-xs text-yellow-700 mt-1">5 articles nécessitent un réapprovisionnement</p>
-                </div>
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
-                <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
-                <div>
-                  <h3 className="font-semibold text-blue-900 text-sm">Devis en attente</h3>
-                  <p className="text-xs text-blue-700 mt-1">12 devis attendent une validation</p>
-                </div>
-              </div>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
-                <div>
-                  <h3 className="font-semibold text-green-900 text-sm">Livraisons du jour</h3>
-                  <p className="text-xs text-green-700 mt-1">8 commandes prêtes pour livraison</p>
-                </div>
-              </div>
+        {/* Afficher le spinner de chargement */}
+        {dashboardLoading ? (
+          <div className="flex justify-center items-center h-96">
+            <div className="flex items-center gap-2">
+              <Loader className="w-6 h-6 animate-spin text-blue-500" />
+              <p className="text-gray-600">Chargement des données du dashboard...</p>
             </div>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+              {statsData.map((stat, index) => (
+                <StatCard
+                  key={index}
+                  icon={stat.icon}
+                  value={stat.value}
+                  label={stat.label}
+                  iconColor={stat.iconColor}
+                />
+              ))}
+            </div>
+
+            {/* Recent Orders avec DataTable */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900">Commandes récentes</h2>
+                  <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">Voir tout →</button>
+                </div>
+
+                {/* Utilisation directe de DataTable */}
+                <DataTable 
+                  columns={columns}
+                  data={recentOrders.length > 0 ? recentOrders : []}
+                  itemsPerPage={5}
+                />
+                {recentOrders.length === 0 && (
+                  <div className="bg-gray-50 rounded-lg p-6 text-center text-gray-500">
+                    Aucune commande récente disponible
+                  </div>
+                )}
+              </div>
+
+              {/* Alerts Section */}
+              <div className="lg:col-span-1">
+                <div className="space-y-4">
+                  <div className={`border rounded-lg p-4 flex items-start gap-3 ${stockAlerts > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <AlertCircle className={`w-5 h-5 mt-0.5 ${stockAlerts > 0 ? 'text-yellow-600' : 'text-gray-600'}`} />
+                    <div>
+                      <h3 className={`font-semibold text-sm ${stockAlerts > 0 ? 'text-yellow-900' : 'text-gray-900'}`}>Stock faible</h3>
+                      <p className={`text-xs mt-1 ${stockAlerts > 0 ? 'text-yellow-700' : 'text-gray-600'}`}>
+                        {stockAlerts} article(s) nécessitent un réapprovisionnement
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`border rounded-lg p-4 flex items-start gap-3 ${pendingQuotes > 0 ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <Clock className={`w-5 h-5 mt-0.5 ${pendingQuotes > 0 ? 'text-blue-600' : 'text-gray-600'}`} />
+                    <div>
+                      <h3 className={`font-semibold text-sm ${pendingQuotes > 0 ? 'text-blue-900' : 'text-gray-900'}`}>Devis en attente</h3>
+                      <p className={`text-xs mt-1 ${pendingQuotes > 0 ? 'text-blue-700' : 'text-gray-600'}`}>
+                        {pendingQuotes} devis attendent une validation
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`border rounded-lg p-4 flex items-start gap-3 ${readyDeliveries > 0 ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <CheckCircle className={`w-5 h-5 mt-0.5 ${readyDeliveries > 0 ? 'text-green-600' : 'text-gray-600'}`} />
+                    <div>
+                      <h3 className={`font-semibold text-sm ${readyDeliveries > 0 ? 'text-green-900' : 'text-gray-900'}`}>Livraisons du jour</h3>
+                      <p className={`text-xs mt-1 ${readyDeliveries > 0 ? 'text-green-700' : 'text-gray-600'}`}>
+                        {readyDeliveries} commande(s) prête(s) pour livraison
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

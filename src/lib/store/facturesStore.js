@@ -1,16 +1,16 @@
 /**
- * Store Zustand pour la gestion des devis
- * Gère l'état global de la liste des devis, pagination, filtrage
+ * Store Zustand pour la gestion des factures
+ * Gère l'état global de la liste des factures, pagination, filtrage
  */
 
 import { create } from 'zustand';
-import { devisService } from '../services/devis.service';
+import { facturesService } from '../services/factures.Service';
 import { MESSAGES } from '../utils/constants';
 
-export const useDevisStore = create((set, get) => ({
+export const useFacturesStore = create((set, get) => ({
     // ============ État ============
-    devis: [],
-    currentDevis: null,
+    factures: [],
+    currentFacture: null,
     loading: false,
     error: null,
     pagination: {
@@ -23,7 +23,7 @@ export const useDevisStore = create((set, get) => ({
         search: '',
         statut: '',
         client_id: '',
-        sortBy: 'date_devis',
+        sortBy: 'date_facture',
         sortDir: 'desc',
     },
     stats: null,
@@ -31,9 +31,9 @@ export const useDevisStore = create((set, get) => ({
     // ============ Actions ============
 
     /**
-     * Récupérer la liste des devis
+     * Récupérer la liste des factures
      */
-    fetchDevis: async (page = 1) => {
+    fetchFactures: async (page = 1) => {
         set({ loading: true, error: null });
         try {
             const { filters, pagination } = get();
@@ -52,10 +52,10 @@ export const useDevisStore = create((set, get) => ({
                 (key) => params[key] === '' && delete params[key]
             );
 
-            const response = await devisService.getDevis(params);
+            const response = await facturesService.getFactures(params);
             
             set({
-                devis: response.data || response,
+                factures: response.data || response,
                 pagination: response.meta || {
                     total: response.length,
                     per_page: pagination.per_page,
@@ -73,14 +73,14 @@ export const useDevisStore = create((set, get) => ({
     },
 
     /**
-     * Récupérer un devis spécifique par ID
+     * Récupérer une facture spécifique par ID
      */
-    fetchDevisById: async (id) => {
+    fetchFactureById: async (id) => {
         set({ loading: true, error: null });
         try {
-            const devis = await devisService.getDevis(id);
-            set({ currentDevis: devis, loading: false });
-            return devis;
+            const facture = await facturesService.getFacture(id);
+            set({ currentFacture: facture, loading: false });
+            return facture;
         } catch (error) {
             set({
                 error: error.message || MESSAGES.ERROR.SERVER,
@@ -91,20 +91,20 @@ export const useDevisStore = create((set, get) => ({
     },
 
     /**
-     * Créer un nouveau devis
+     * Créer une nouvelle facture
      */
-    createDevis: async (data) => {
+    createFacture: async (data) => {
         set({ loading: true, error: null });
         try {
-            const newDevis = await devisService.createDevis(data);
+            const newFacture = await facturesService.createFacture(data);
             
             // Ajouter à la liste
             set((state) => ({
-                devis: [newDevis, ...state.devis],
+                factures: [newFacture, ...state.factures],
                 loading: false,
             }));
 
-            return newDevis;
+            return newFacture;
         } catch (error) {
             set({
                 error: error.message || MESSAGES.ERROR.SERVER,
@@ -115,24 +115,24 @@ export const useDevisStore = create((set, get) => ({
     },
 
     /**
-     * Mettre à jour un devis
+     * Mettre à jour une facture
      */
-    updateDevis: async (id, data) => {
+    updateFacture: async (id, data) => {
         set({ loading: true, error: null });
         try {
-            const updatedDevis = await devisService.updateDevis(id, data);
+            const updatedFacture = await facturesService.updateFacture(id, data);
             
             // Mettre à jour dans la liste
             set((state) => ({
-                devis: state.devis.map((devis) =>
-                    devis.id === id ? updatedDevis : devis
+                factures: state.factures.map((facture) =>
+                    facture.id === id ? updatedFacture : facture
                 ),
-                currentDevis:
-                    state.currentDevis?.id === id ? updatedDevis : state.currentDevis,
+                currentFacture:
+                    state.currentFacture?.id === id ? updatedFacture : state.currentFacture,
                 loading: false,
             }));
 
-            return updatedDevis;
+            return updatedFacture;
         } catch (error) {
             set({
                 error: error.message || MESSAGES.ERROR.SERVER,
@@ -143,17 +143,17 @@ export const useDevisStore = create((set, get) => ({
     },
 
     /**
-     * Supprimer un devis
+     * Supprimer une facture
      */
-    deleteDevis: async (id) => {
+    deleteFacture: async (id) => {
         set({ loading: true, error: null });
         try {
-            await devisService.deleteDevis(id);
+            await facturesService.deleteFacture(id);
             
             // Supprimer de la liste
             set((state) => ({
-                devis: state.devis.filter((devis) => devis.id !== id),
-                currentDevis: state.currentDevis?.id === id ? null : state.currentDevis,
+                factures: state.factures.filter((facture) => facture.id !== id),
+                currentFacture: state.currentFacture?.id === id ? null : state.currentFacture,
                 loading: false,
             }));
         } catch (error) {
@@ -166,22 +166,22 @@ export const useDevisStore = create((set, get) => ({
     },
 
     /**
-     * Valider un devis et créer une facture
+     * Marquer une facture comme payée
      */
-    validateAndInvoice: async (id, data = {}) => {
+    markAsPaid: async (id, data = {}) => {
         set({ loading: true, error: null });
         try {
-            const result = await devisService.validateAndInvoice(id, data);
+            const result = await facturesService.markAsPaid(id, data);
             
-            // Marquer le devis comme accepté dans la liste
+            // Marquer la facture comme payée dans la liste
             set((state) => ({
-                devis: state.devis.map((devis) =>
-                    devis.id === id ? { ...devis, statut: 'Accepté' } : devis
+                factures: state.factures.map((facture) =>
+                    facture.id === id ? { ...facture, statut: 'Payée' } : facture
                 ),
-                currentDevis:
-                    state.currentDevis?.id === id 
-                        ? { ...state.currentDevis, statut: 'Accepté' } 
-                        : state.currentDevis,
+                currentFacture:
+                    state.currentFacture?.id === id 
+                        ? { ...state.currentFacture, statut: 'Payée' } 
+                        : state.currentFacture,
                 loading: false,
             }));
 
@@ -196,53 +196,22 @@ export const useDevisStore = create((set, get) => ({
     },
 
     /**
-     * Convertir un devis en commande
+     * Rechercher les factures
      */
-    convertToOrder: async (devisId, data = {}) => {
-        set({ loading: true, error: null });
-        try {
-            // Appeler validateAndInvoice qui crée une commande
-            const result = await devisService.validateAndInvoice(devisId, data);
-            
-            // Mettre à jour le statut du devis
-            set((state) => ({
-                devis: state.devis.map((devis) =>
-                    devis.id === devisId ? { ...devis, statut: 'Accepté' } : devis
-                ),
-                currentDevis:
-                    state.currentDevis?.id === devisId 
-                        ? { ...state.currentDevis, statut: 'Accepté' } 
-                        : state.currentDevis,
-                loading: false,
-            }));
-
-            return result;
-        } catch (error) {
-            set({
-                error: error.message || MESSAGES.ERROR.SERVER,
-                loading: false,
-            });
-            throw error;
-        }
-    },
-
-    /**
-     * Rechercher les devis
-     */
-    searchDevis: async (query) => {
+    searchFactures: async (query) => {
         if (!query || query.trim() === '') {
             set((state) => ({
                 filters: { ...state.filters, search: '' },
             }));
-            get().fetchDevis(1);
+            get().fetchFactures(1);
             return;
         }
 
         set({ loading: true, error: null });
         try {
-            const results = await devisService.searchDevis(query);
+            const results = await facturesService.searchFactures(query);
             set((state) => ({
-                devis: results.data || results,
+                factures: results.data || results,
                 filters: { ...state.filters, search: query },
                 loading: false,
             }));
@@ -255,14 +224,14 @@ export const useDevisStore = create((set, get) => ({
     },
 
     /**
-     * Filtrer les devis par statut
+     * Filtrer les factures par statut
      */
     filterByStatut: async (statut) => {
         set({ loading: true, error: null });
         try {
-            const results = await devisService.getDevisByStatut(statut);
+            const results = await facturesService.getFacturesByStatut(statut);
             set((state) => ({
-                devis: results.data || results,
+                factures: results.data || results,
                 filters: { ...state.filters, statut },
                 loading: false,
             }));
@@ -275,14 +244,14 @@ export const useDevisStore = create((set, get) => ({
     },
 
     /**
-     * Obtenir les devis d'un client
+     * Obtenir les factures d'un client
      */
-    getDevisByClient: async (clientId) => {
+    getFacturesByClient: async (clientId) => {
         set({ loading: true, error: null });
         try {
-            const results = await devisService.getDevisByClient(clientId);
+            const results = await facturesService.getFacturesByClient(clientId);
             set((state) => ({
-                devis: results.data || results,
+                factures: results.data || results,
                 filters: { ...state.filters, client_id: clientId },
                 loading: false,
             }));
@@ -297,19 +266,36 @@ export const useDevisStore = create((set, get) => ({
     },
 
     /**
-     * Exporter un devis en PDF
+     * Récupérer les statistiques des factures
      */
-    exportDevisPDF: async (id) => {
+    fetchStats: async () => {
         set({ loading: true, error: null });
         try {
-            const blob = await devisService.exportPDF(id);
+            const stats = await facturesService.getFacturesStats();
+            set({ stats, loading: false });
+            return stats;
+        } catch (error) {
+            set({
+                error: error.message || MESSAGES.ERROR.SERVER,
+                loading: false,
+            });
+        }
+    },
+
+    /**
+     * Exporter une facture en PDF
+     */
+    exportFacturePDF: async (id) => {
+        set({ loading: true, error: null });
+        try {
+            const blob = await facturesService.exportPDF(id);
             set({ loading: false });
             
             // Créer un lien de téléchargement
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `devis-${id}.pdf`;
+            a.download = `facture-${id}.pdf`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -333,14 +319,14 @@ export const useDevisStore = create((set, get) => ({
             filters: { ...state.filters, ...newFilters },
         }));
         // Réinitialiser à la page 1
-        get().fetchDevis(1);
+        get().fetchFactures(1);
     },
 
     /**
      * Changer de page
      */
     setPage: (page) => {
-        get().fetchDevis(page);
+        get().fetchFactures(page);
     },
 
     /**
@@ -348,8 +334,8 @@ export const useDevisStore = create((set, get) => ({
      */
     reset: () => {
         set({
-            devis: [],
-            currentDevis: null,
+            factures: [],
+            currentFacture: null,
             loading: false,
             error: null,
             pagination: {
@@ -362,7 +348,7 @@ export const useDevisStore = create((set, get) => ({
                 search: '',
                 statut: '',
                 client_id: '',
-                sortBy: 'date_devis',
+                sortBy: 'date_facture',
                 sortDir: 'desc',
             },
             stats: null,

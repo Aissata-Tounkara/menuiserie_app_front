@@ -1,9 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Plus, AlertTriangle, TrendingDown, TrendingUp, Package, Box,
-  Edit2, Trash2, RefreshCw, Download, Save
+  Edit2, Trash2, RefreshCw, Download, Save, Loader
 } from 'lucide-react';
 import { Link } from "react-router-dom";
+
+// Stores
+import { useStocksStore } from './lib/store/stocksStore';
 
 // Composants réutilisables
 import Header from './components/layout/Header';
@@ -12,99 +15,62 @@ import FilterBar from './components/ui/FilterBar';
 import TableSearch from './components/tables/TableSearch';
 import DataTable from './components/tables/DataTable';
 import Modal from './components/ui/Modal';
-import Form from './components/ui/Form'; // 👈 ajouté
+import Form from './components/ui/Form';
 
 export default function GestionStock() {
+  // Store hooks
+  const {
+    articles,
+    articlesLoading,
+    articlesError,
+    articlesPagination,
+    articlesStats,
+    stockAlerts,
+    fetchArticles,
+    fetchArticlesStats,
+    fetchStockAlerts,
+    createArticle,
+    updateArticle,
+    deleteArticle,
+    searchArticles,
+    setArticlesFilters,
+  } = useStocksStore();
+
+  // Local state
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('add');
   const [selectedArticle, setSelectedArticle] = useState(null);
-
-  const [articles, setArticles] = useState([
-    {
-      id: 1,
-      nom: 'Profilé aluminium coulissant',
-      reference: 'PRO-COU-001',
-      categorie: 'Profilés aluminium',
-      quantite: 45,
-      unite: 'barre (6m)',
-      seuilAlerte: 20,
-      prixAchat: 8500,
-      fournisseur: 'AlumPro Algérie',
-      emplacement: 'Zone A - Rack 1',
-      derniereEntree: '05/11/2024',
-      derniereSortie: '08/11/2024'
-    },
-    {
-      id: 2,
-      nom: 'Profilé aluminium battant',
-      reference: 'PRO-BAT-002',
-      categorie: 'Profilés aluminium',
-      quantite: 8,
-      unite: 'barre (6m)',
-      seuilAlerte: 15,
-      prixAchat: 7800,
-      fournisseur: 'AlumPro Algérie',
-      emplacement: 'Zone A - Rack 1',
-      derniereEntree: '01/11/2024',
-      derniereSortie: '09/11/2024'
-    },
-    {
-      id: 3,
-      nom: 'Double vitrage 4/16/4',
-      reference: 'VIT-DOU-001',
-      categorie: 'Vitrage',
-      quantite: 28,
-      unite: 'm²',
-      seuilAlerte: 15,
-      prixAchat: 4500,
-      fournisseur: 'Vitralux',
-      emplacement: 'Zone B - Stockage vertical',
-      derniereEntree: '06/11/2024',
-      derniereSortie: '08/11/2024'
-    },
-    {
-      id: 4,
-      nom: 'Poignée fenêtre chromée',
-      reference: 'QUI-POI-001',
-      categorie: 'Quincaillerie',
-      quantite: 125,
-      unite: 'unité',
-      seuilAlerte: 50,
-      prixAchat: 850,
-      fournisseur: 'QuincaBat',
-      emplacement: 'Zone C - Étagère 3',
-      derniereEntree: '03/11/2024',
-      derniereSortie: '10/11/2024'
-    },
-    {
-      id: 5,
-      nom: 'Serrure 3 points',
-      reference: 'QUI-SER-002',
-      categorie: 'Quincaillerie',
-      quantite: 18,
-      unite: 'unité',
-      seuilAlerte: 10,
-      prixAchat: 12500,
-      fournisseur: 'QuincaBat',
-      emplacement: 'Zone C - Étagère 2',
-      derniereEntree: '07/11/2024',
-      derniereSortie: '09/11/2024'
-    }
-  ]);
+  const [formSubmitting, setFormSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     nom: '',
-    categorie: '',
     reference: '',
+    categorie: '',
     quantite: 0,
     unite: 'unité',
-    seuilAlerte: 10,
-    prixAchat: 0,
+    seuil_alerte: 10,
+    prix_achat: 0,
     fournisseur: '',
     emplacement: ''
   });
+
+  // Charger les articles au montage du composant
+  useEffect(() => {
+    fetchArticles(1);
+    fetchArticlesStats();
+    fetchStockAlerts();
+  }, [fetchArticles, fetchArticlesStats, fetchStockAlerts]);
+
+  // Gérer la recherche
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      searchArticles(searchTerm);
+    } else {
+      fetchArticles(1);
+    }
+  }, [searchTerm, searchArticles, fetchArticles]);
 
   const categories = ['Profilés aluminium', 'Vitrage', 'Quincaillerie', 'Joints et étanchéité', 'Accessoires', 'Outils'];
 
@@ -118,18 +84,29 @@ export default function GestionStock() {
   ];
 
   const filteredArticles = useMemo(() => {
-    return articles.filter(article => {
-      const matchCategory = selectedCategory === 'all' || article.categorie === selectedCategory;
-      const matchSearch = 
-        article.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        article.reference.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchCategory && matchSearch;
-    });
-  }, [searchTerm, selectedCategory, articles]);
+    if (selectedCategory === 'all') {
+      return articles;
+    }
+    return articles.filter(article => article.categorie === selectedCategory);
+  }, [selectedCategory, articles]);
 
-  const calculateTotalValue = () => articles.reduce((sum, a) => sum + (a.quantite * a.prixAchat), 0);
-  const getAlerteCount = () => articles.filter(a => a.quantite <= a.seuilAlerte).length;
-  const getCritiqueCount = () => articles.filter(a => a.quantite <= a.seuilAlerte * 0.5).length;
+  const calculateTotalValue = () => articles.reduce((sum, a) => {
+    const quantite = parseInt(a.quantite || 0);
+    const prix = parseFloat(a.prix_achat || 0);
+    return sum + (quantite * prix);
+  }, 0);
+
+  const getAlerteCount = () => articles.filter(a => {
+    const quantite = parseInt(a.quantite || 0);
+    const seuil = parseInt(a.seuil_alerte || 0);
+    return quantite <= seuil;
+  }).length;
+
+  const getCritiqueCount = () => articles.filter(a => {
+    const quantite = parseInt(a.quantite || 0);
+    const seuil = parseInt(a.seuil_alerte || 0);
+    return quantite <= seuil * 0.5;
+  }).length;
 
   const statsCards = [
     { label: 'Total articles', value: articles.length, icon: Box, color: 'bg-blue-500' },
@@ -139,7 +116,10 @@ export default function GestionStock() {
   ];
 
   const getStockStatus = (quantite, seuilAlerte) => {
-    const ratio = quantite / seuilAlerte;
+    const q = parseInt(quantite || 0);
+    const s = parseInt(seuilAlerte || 0);
+    if (s === 0) return 'Bon';
+    const ratio = q / s;
     if (ratio <= 0.5) return 'Critique';
     if (ratio <= 1) return 'Faible';
     if (ratio <= 2) return 'Moyen';
@@ -149,7 +129,7 @@ export default function GestionStock() {
   const actions = [
     {
       icon: <RefreshCw className="w-4 h-4" />,
-      onClick: () => alert('Ajuster stock'),
+      onClick: () => alert('Ajuster stock - À implémenter'),
       className: 'bg-blue-50 text-blue-600 hover:bg-blue-100'
     },
     {
@@ -159,7 +139,7 @@ export default function GestionStock() {
     },
     {
       icon: <Trash2 className="w-4 h-4" />,
-      onClick: (row) => deleteArticle(row.id),
+      onClick: (row) => handleDeleteArticle(row.id),
       className: 'bg-red-50 text-red-600 hover:bg-red-100'
     }
   ];
@@ -171,7 +151,7 @@ export default function GestionStock() {
       render: (_, row) => (
         <div>
           <div className="font-semibold text-gray-900">{row.nom}</div>
-          <div className="text-xs text-gray-500">{row.reference}</div>
+          <div className="text-xs text-gray-500">{row.designation || row.reference || '-'}</div>
         </div>
       )
     },
@@ -185,54 +165,65 @@ export default function GestionStock() {
       key: 'quantite',
       render: (_, row) => (
         <div>
-          <div className="font-bold text-gray-900 text-lg">{row.quantite}</div>
-          <div className="text-xs text-gray-500">{row.unite}</div>
+          <div className="font-bold text-gray-900 text-lg">{row.quantite || 0}</div>
+          <div className="text-xs text-gray-500">{row.unite || 'unité'}</div>
         </div>
       )
     },
     {
       header: 'Seuil alerte',
-      key: 'seuilAlerte',
+      key: 'seuil_alerte',
       render: (_, row) => (
-        <div className="text-sm text-gray-700">{row.seuilAlerte} {row.unite}</div>
+        <div className="text-sm text-gray-700">{row.seuil_alerte || '-'} {row.unite || 'unité'}</div>
       )
     },
     {
       header: 'Prix achat',
-      key: 'prixAchat',
-      render: (_, row) => (
-        <div className="text-sm font-semibold text-gray-900">{row.prixAchat.toLocaleString()} DA</div>
-      )
+      key: 'prix_achat',
+      render: (_, row) => {
+        const prix = parseFloat(row.prix_achat || 0);
+        return (
+          <div className="text-sm font-semibold text-gray-900">
+            {prix ? parseInt(prix).toLocaleString() : '0'} DA
+          </div>
+        );
+      }
     },
     {
       header: 'Valeur totale',
-      key: 'valeurTotale',
-      render: (_, row) => (
-        <div className="text-sm font-bold text-green-600">
-          {(row.quantite * row.prixAchat).toLocaleString()} DA
-        </div>
-      )
+      key: 'valeur_totale',
+      render: (_, row) => {
+        const quantite = parseInt(row.quantite || 0);
+        const prix = parseFloat(row.prix_achat || 0);
+        const total = quantite * prix;
+        return (
+          <div className="text-sm font-bold text-green-600">
+            {total.toLocaleString()} DA
+          </div>
+        );
+      }
     },
     {
       header: 'Emplacement',
       key: 'emplacement',
       render: (_, row) => (
         <div>
-          <div className="text-sm text-gray-700">{row.emplacement}</div>
-          <div className="text-xs text-gray-500">{row.fournisseur}</div>
+          <div className="text-sm text-gray-700">{row.emplacement || '-'}</div>
+          <div className="text-xs text-gray-500">{row.fournisseur || '-'}</div>
         </div>
       )
     },
     {
       header: 'Statut',
-      key: 'statut',
+      key: 'statut_stock',
       render: (_, row) => {
-        const status = getStockStatus(row.quantite, row.seuilAlerte);
+        const status = row.statut_stock || getStockStatus(row.quantite || 0, row.seuil_alerte || 0);
         const getColor = (s) => {
           switch (s) {
             case 'Critique': return 'bg-red-100 text-red-800';
             case 'Faible': return 'bg-orange-100 text-orange-800';
             case 'Moyen': return 'bg-yellow-100 text-yellow-800';
+            case 'Épuisé': return 'bg-red-100 text-red-800';
             default: return 'bg-green-100 text-green-800';
           }
         };
@@ -241,6 +232,7 @@ export default function GestionStock() {
             case 'Critique': return <AlertTriangle className="w-3 h-3" />;
             case 'Faible': return <TrendingDown className="w-3 h-3" />;
             case 'Moyen': return <Package className="w-3 h-3" />;
+            case 'Épuisé': return <AlertTriangle className="w-3 h-3" />;
             default: return <TrendingUp className="w-3 h-3" />;
           }
         };
@@ -278,8 +270,8 @@ export default function GestionStock() {
         { label: 'mètre linéaire', value: 'mètre linéaire' }
       ]
     },
-    { name: 'seuilAlerte', label: 'Seuil d\'alerte', type: 'number', required: true },
-    { name: 'prixAchat', label: 'Prix d\'achat (DA)', type: 'number', required: true },
+    { name: 'seuil_alerte', label: 'Seuil d\'alerte', type: 'number', required: true },
+    { name: 'prix_achat', label: 'Prix d\'achat (DA)', type: 'number', required: true },
     { name: 'emplacement', label: 'Emplacement' }
   ];
 
@@ -290,8 +282,8 @@ export default function GestionStock() {
       setFormData({ ...article });
     } else {
       setFormData({
-        nom: '', categorie: '', reference: '', quantite: 0, unite: 'unité',
-        seuilAlerte: 10, prixAchat: 0, fournisseur: '', emplacement: ''
+        nom: '', reference: '', categorie: '', quantite: 0, unite: 'unité',
+        seuil_alerte: 10, prix_achat: 0, fournisseur: '', emplacement: ''
       });
     }
     setShowModal(true);
@@ -307,45 +299,75 @@ export default function GestionStock() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFormSubmit = () => {
-    const { nom, reference, categorie, quantite, prixAchat } = formData;
-    if (!nom || !reference || !categorie || !quantite || !prixAchat) {
+  const handleFormSubmit = async () => {
+    const { nom, reference, categorie, quantite, prix_achat } = formData;
+    if (!nom || !reference || !categorie || !quantite || !prix_achat) {
       alert('Veuillez remplir tous les champs obligatoires');
       return;
     }
 
-    if (modalMode === 'add') {
-      const newArticle = {
-        id: Math.max(...articles.map(a => a.id), 0) + 1,
-        ...formData,
-        quantite: parseInt(formData.quantite),
-        prixAchat: parseFloat(formData.prixAchat),
-        seuilAlerte: parseInt(formData.seuilAlerte),
-        derniereEntree: new Date().toLocaleDateString('fr-FR'),
-        derniereSortie: new Date().toLocaleDateString('fr-FR')
-      };
-      setArticles([...articles, newArticle]);
-    } else if (modalMode === 'edit' && selectedArticle) {
-      setArticles(articles.map(a =>
-        a.id === selectedArticle.id
-          ? { ...a, ...formData, quantite: parseInt(formData.quantite), prixAchat: parseFloat(formData.prixAchat) }
-          : a
-      ));
+    setFormSubmitting(true);
+    try {
+      if (modalMode === 'add') {
+        await createArticle({
+          nom: formData.nom,
+          reference: formData.reference,
+          categorie: formData.categorie,
+          quantite: parseInt(formData.quantite),
+          unite: formData.unite,
+          seuil_alerte: parseInt(formData.seuil_alerte),
+          prix_achat: parseFloat(formData.prix_achat),
+          fournisseur: formData.fournisseur,
+          emplacement: formData.emplacement,
+        });
+      } else if (modalMode === 'edit' && selectedArticle) {
+        await updateArticle(selectedArticle.id, {
+          nom: formData.nom,
+          reference: formData.reference,
+          categorie: formData.categorie,
+          quantite: parseInt(formData.quantite),
+          unite: formData.unite,
+          seuil_alerte: parseInt(formData.seuil_alerte),
+          prix_achat: parseFloat(formData.prix_achat),
+          fournisseur: formData.fournisseur,
+          emplacement: formData.emplacement,
+        });
+      }
+      closeModal();
+      await fetchArticles(1);
+      fetchArticlesStats();
+      fetchStockAlerts();
+    } catch (error) {
+      alert(`Erreur: ${error.message}`);
+    } finally {
+      setFormSubmitting(false);
     }
-    closeModal();
   };
 
-  const deleteArticle = (id) => {
+  const handleDeleteArticle = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) {
-      setArticles(articles.filter(a => a.id !== id));
+      try {
+        await deleteArticle(id);
+        fetchArticlesStats();
+        fetchStockAlerts();
+      } catch (error) {
+        alert(`Erreur: ${error.message}`);
+      }
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Afficher l'erreur si elle existe */}
+      {articlesError && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 m-4">
+          <p className="text-red-700">{articlesError}</p>
+        </div>
+      )}
+
       <Header
         title="Gestion du Stock"
-        subtitle={`${filteredArticles.length} articles en stock`}
+        subtitle={articlesLoading ? 'Chargement...' : `${filteredArticles.length} articles en stock`}
         navigationLinks={[
           { label: 'Dashboard', href: '/dashboard' },
           { label: 'Gestion clients', href: '/gestion-clients' },
@@ -355,6 +377,12 @@ export default function GestionStock() {
           { label: 'Gestion des dépenses', href: '/gestion-depenses' }
         ]}
         actions={[
+          {
+            label: 'Rafraîchir',
+            icon: <RefreshCw className="w-4 h-4" />,
+            onClick: () => fetchArticles(1),
+            variant: 'secondary'
+          },
           {
             label: 'Exporter',
             icon: <Download className="w-4 h-4" />,
@@ -412,12 +440,21 @@ export default function GestionStock() {
           />
         </div>
 
-        <DataTable
-          columns={columns}
-          data={filteredArticles}
-          actions={actions}
-          itemsPerPage={5}
-        />
+        {articlesLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="flex items-center gap-2">
+              <Loader className="w-5 h-5 animate-spin text-blue-500" />
+              <p>Chargement des articles...</p>
+            </div>
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={filteredArticles}
+            actions={actions}
+            itemsPerPage={5}
+          />
+        )}
       </main>
 
       {/* MODAL avec Form réutilisable */}
@@ -434,6 +471,7 @@ export default function GestionStock() {
           onSubmit={handleFormSubmit}
           submitLabel={modalMode === 'add' ? "Ajouter l'article" : "Enregistrer les modifications"}
           cancelLabel="Annuler"
+          isLoading={formSubmitting}
         />
       </Modal>
     </div>

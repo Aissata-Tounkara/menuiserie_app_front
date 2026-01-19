@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Eye, Download, Send, DollarSign, AlertCircle, CheckCircle,
   Clock, FileText, Plus, Trash2, Calendar, User, CreditCard, Mail, Phone
@@ -16,101 +16,99 @@ import Modal from './components/ui/Modal';
 // Composant d'impression
 import InvoicePrintView from './components/invoice/InvoicePrintView';
 
+// Import du store et utils
+import { useFacturesStore } from './lib/store/facturesStore';
+import { MESSAGES } from './lib/utils/constants';
+
 export default function GestionFactures() {
+  // --- ZUSTAND STORE ---
+  const {
+    factures,
+    loading,
+    error,
+    pagination,
+    stats,
+    fetchFactures,
+    fetchFactureById,
+    markAsPaid,
+    deleteFacture,
+    fetchStats,
+    searchFactures,
+    filterByStatut,
+    exportFacturePDF,
+    clearError
+  } = useFacturesStore();
+
+  // --- ÉTATS LOCAUX ---
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedFacture, setSelectedFacture] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [factureToConfirm, setFactureToConfirm] = useState(null);
+  const [submitLoading, setSubmitLoading] = useState(false);
 
-  const [factures, setFactures] = useState([
-    {
-      id: 'FAC-2024-001',
-      numeroFacture: 'F-001/2024',
-      commande: 'CMD-2024-001',
-      client: { 
-        nom: 'Ahmed Benali', 
-        tel: '0555 123 456', 
-        email: 'ahmed.benali@email.dz', 
-        adresse: '15 Rue des Martyrs, Oran' 
-      },
-      dateEmission: '08/11/2024',
-      dateEcheance: '23/11/2024',
-      montantHT: 142000,
-      tva: 26980,
-      montantTTC: 169180,
-      montantPaye: 169180,
-      modePaiement: 'Virement bancaire',
-      datePaiement: '10/11/2024',
-      articles: [
-        { designation: 'Fenêtre coulissante 1.20m × 1.50m', quantite: 2, prixUnitaire: 15000, total: 30000 },
-        { designation: 'Porte d\'entrée 0.90m × 2.15m', quantite: 1, prixUnitaire: 65000, total: 65000 },
-        { designation: 'Volet roulant 1.20m × 1.50m', quantite: 2, prixUnitaire: 22000, total: 44000 },
-        { designation: 'Installation et pose', quantite: 1, prixUnitaire: 3000, total: 3000 }
-      ]
-    },
-    {
-      id: 'FAC-2024-002',
-      numeroFacture: 'F-002/2024',
-      commande: 'CMD-2024-002',
-      client: { 
-        nom: 'Fatima Kader', 
-        tel: '0661 234 567', 
-        email: 'fatima.kader@email.dz', 
-        adresse: '32 Cité Es-Salam, Oran' 
-      },
-      dateEmission: '07/11/2024',
-      dateEcheance: '22/11/2024',
-      montantHT: 78500,
-      tva: 14915,
-      montantTTC: 93415,
-      montantPaye: 0,
-      modePaiement: 'Espèces',
-      datePaiement: '',
-      articles: [
-        { designation: 'Porte d\'entrée blindée 0.90m × 2.15m', quantite: 1, prixUnitaire: 78500, total: 78500 }
-      ]
-    }
-  ]);
+  // --- EFFET: Charger les données au montage ---
+  useEffect(() => {
+    fetchFactures(1);
+    fetchStats();
+    clearError();
+  }, [fetchFactures, fetchStats, clearError]);
 
   // Fonction utilitaire pour calculer le statut réel
   const getActualStatus = (facture) => {
-    if (facture.montantPaye >= facture.montantTTC) return 'Payée';
-    const [jour, mois, annee] = facture.dateEcheance.split('/');
-    const echeanceDate = new Date(annee, mois - 1, jour);
+    if (facture.montant_paye >= facture.montant_ttc) return 'Payée';
+    
+    // Gérer différents formats de date
+    let echeanceDate;
+    if (facture.date_echeance) {
+      if (facture.date_echeance.includes('/')) {
+        const [jour, mois, annee] = facture.date_echeance.split('/');
+        echeanceDate = new Date(annee, mois - 1, jour);
+      } else {
+        echeanceDate = new Date(facture.date_echeance);
+      }
+    }
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    echeanceDate.setHours(0, 0, 0, 0);
-    return echeanceDate < today ? 'En retard' : 'En attente';
+    if (echeanceDate) {
+      echeanceDate.setHours(0, 0, 0, 0);
+      return echeanceDate < today ? 'En retard' : 'En attente';
+    }
+    return 'En attente';
   };
 
   // Données filtrées
   const filteredFactures = useMemo(() => {
+    if (!factures || factures.length === 0) return [];
+    
     return factures.map(f => ({ ...f, statutCalcule: getActualStatus(f) }))
       .filter(f => {
         const matchStatus = selectedStatus === 'all' || f.statutCalcule === selectedStatus;
+        const numeroFacture = f.numero_facture || f.numeroFacture || '';
+        const clientNom = f.client?.nom || f.clientNom || '';
         const matchSearch = 
-          f.numeroFacture.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          f.client.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          f.id.toLowerCase().includes(searchTerm.toLowerCase());
+          numeroFacture.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          clientNom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          String(f.id).toLowerCase().includes(searchTerm.toLowerCase());
         return matchStatus && matchSearch;
       });
   }, [searchTerm, selectedStatus, factures]);
 
   // Options de filtre
-  const filterOptions = [
+  const filterOptions = useMemo(() => [
     { label: 'Tous', value: 'all', count: factures.length },
     { label: 'Payée', value: 'Payée', count: factures.filter(f => getActualStatus(f) === 'Payée').length },
     { label: 'En attente', value: 'En attente', count: factures.filter(f => getActualStatus(f) === 'En attente').length },
     { label: 'En retard', value: 'En retard', count: factures.filter(f => getActualStatus(f) === 'En retard').length }
-  ];
+  ], [factures]);
 
   // Stats
-  const calculateTotalCA = () => factures.filter(f => getActualStatus(f) === 'Payée').reduce((sum, f) => sum + f.montantTTC, 0);
+  const calculateTotalCA = () => factures.filter(f => getActualStatus(f) === 'Payée').reduce((sum, f) => sum + (f.montant_ttc || f.montantTTC || 0), 0);
   const calculateTotalEnAttente = () => factures
     .filter(f => ['En attente', 'En retard'].includes(getActualStatus(f)))
-    .reduce((sum, f) => sum + (f.montantTTC - f.montantPaye), 0);
+    .reduce((sum, f) => sum + ((f.montant_ttc || f.montantTTC || 0) - (f.montant_paye || f.montantPaye || 0)), 0);
 
   const statsCards = [
     { label: 'Total factures', value: factures.length, icon: FileText, color: 'bg-blue-500' },
@@ -119,34 +117,15 @@ export default function GestionFactures() {
     { label: 'Factures payées', value: factures.filter(f => getActualStatus(f) === 'Payée').length, icon: CheckCircle, color: 'bg-purple-500' }
   ];
 
-  // Actions du tableau
-  const actions = [
-    {
-      icon: <Eye className="w-4 h-4" />,
-      onClick: (row) => openModal(row),
-      className: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-    },
-    {
-      icon: <Download className="w-4 h-4" />,
-      onClick: () => alert('PDF'),
-      className: 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-    },
-    {
-      icon: <Send className="w-4 h-4" />,
-      onClick: () => alert('Email'),
-      className: 'bg-green-50 text-green-600 hover:bg-green-100'
-    }
-  ];
-
   // Colonnes du DataTable
   const columns = [
     {
       header: 'N° Facture',
-      key: 'numeroFacture',
+      key: 'numero_facture',
       render: (_, row) => (
         <div>
-          <div className="font-semibold text-blue-600">{row.numeroFacture}</div>
-          <div className="text-xs text-gray-500">{row.commande}</div>
+          <div className="font-semibold text-blue-600">{row.numero_facture || row.numeroFacture}</div>
+          <div className="text-xs text-gray-500">{row.commande_id || row.commande}</div>
         </div>
       )
     },
@@ -155,46 +134,48 @@ export default function GestionFactures() {
       key: 'client',
       render: (_, row) => (
         <div>
-          <div className="font-semibold text-gray-900">{row.client.nom}</div>
-          <div className="text-xs text-gray-500">{row.client.tel}</div>
+          <div className="font-semibold text-gray-900">{row.client?.nom || row.clientNom}</div>
+          <div className="text-xs text-gray-500">{row.client?.telephone || row.clientTel}</div>
         </div>
       )
     },
     {
       header: 'Date émission',
-      key: 'dateEmission',
+      key: 'date_facture',
       render: (_, row) => (
         <div className="text-sm text-gray-700 flex items-center gap-1">
           <Calendar className="w-4 h-4 text-gray-400" />
-          {row.dateEmission}
+          {row.date_facture || row.dateEmission}
         </div>
       )
     },
     {
       header: 'Échéance',
-      key: 'dateEcheance',
+      key: 'date_echeance',
       render: (_, row) => (
-        <div className="text-sm font-medium text-gray-900">{row.dateEcheance}</div>
+        <div className="text-sm font-medium text-gray-900">{row.date_echeance || row.dateEcheance}</div>
       )
     },
     {
       header: 'Montant TTC',
-      key: 'montantTTC',
+      key: 'montant_ttc',
       render: (_, row) => (
         <div>
-          <div className="font-bold text-gray-900">{row.montantTTC.toLocaleString()} Fcfa</div>
-          <div className="text-xs text-gray-500">HT: {row.montantHT.toLocaleString()} Fcfa</div>
+          <div className="font-bold text-gray-900">{(row.montant_ttc || row.montantTTC || 0).toLocaleString()} Fcfa</div>
+          <div className="text-xs text-gray-500">HT: {(row.montant_ht || row.montantHT || 0).toLocaleString()} Fcfa</div>
         </div>
       )
     },
     {
       header: 'Payé',
-      key: 'montantPaye',
+      key: 'montant_paye',
       render: (_, row) => {
-        const reste = row.montantTTC - row.montantPaye;
+        const montantPaye = row.montant_paye || row.montantPaye || 0;
+        const montantTTC = row.montant_ttc || row.montantTTC || 0;
+        const reste = montantTTC - montantPaye;
         return (
           <div className="text-sm">
-            <div className="font-semibold text-green-600">{row.montantPaye.toLocaleString()} Fcfa</div>
+            <div className="font-semibold text-green-600">{montantPaye.toLocaleString()} Fcfa</div>
             {reste > 0 && <div className="text-xs text-orange-600">Reste: {reste.toLocaleString()} Fcfa</div>}
           </div>
         );
@@ -235,6 +216,25 @@ export default function GestionFactures() {
     }
   ];
 
+  // Actions du tableau
+  const actions = [
+    {
+      icon: <Eye className="w-4 h-4" />,
+      onClick: (row) => openModal(row),
+      className: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+    },
+    {
+      icon: <Download className="w-4 h-4" />,
+      onClick: (row) => handleExportPDF(row),
+      className: 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+    },
+    {
+      icon: <Trash2 className="w-4 h-4" />,
+      onClick: (row) => handleDeleteFacture(row),
+      className: 'bg-red-50 text-red-600 hover:bg-red-100'
+    }
+  ];
+
   // Gestion modale
   const openModal = (facture) => {
     setSelectedFacture(facture);
@@ -258,18 +258,76 @@ export default function GestionFactures() {
     setFactureToConfirm(null);
   };
 
-  const confirmMarkAsPaid = () => {
+  const confirmMarkAsPaid = async () => {
     if (!factureToConfirm) return;
-    const updatedFactures = factures.map(f => 
-      f.id === factureToConfirm.id 
-        ? { ...f, montantPaye: f.montantTTC }
-        : f
-    );
-    setFactures(updatedFactures);
-    if (selectedFacture && selectedFacture.id === factureToConfirm.id) {
-      setSelectedFacture({ ...selectedFacture, montantPaye: selectedFacture.montantTTC });
+    
+    setSubmitLoading(true);
+    try {
+      await markAsPaid(factureToConfirm.id, {
+        montant_paye: factureToConfirm.montant_ttc || factureToConfirm.montantTTC,
+        date_paiement: new Date().toISOString().split('T')[0]
+      });
+      
+      // Recharger la liste
+      fetchFactures(1);
+      
+      // Mettre à jour le sélectionné si c'est le même
+      if (selectedFacture && selectedFacture.id === factureToConfirm.id) {
+        setSelectedFacture({ 
+          ...selectedFacture, 
+          montant_paye: selectedFacture.montant_ttc || selectedFacture.montantTTC 
+        });
+      }
+      
+      closeConfirmModal();
+      alert('Facture marquée comme payée !');
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour:', err);
+      alert('Erreur : ' + (err.message || 'Impossible de marquer la facture comme payée'));
+    } finally {
+      setSubmitLoading(false);
     }
-    closeConfirmModal();
+  };
+
+  const handleExportPDF = async (facture) => {
+    try {
+      await exportFacturePDF(facture.id);
+    } catch (err) {
+      console.error('Erreur lors du téléchargement:', err);
+      alert('Erreur : Impossible de télécharger la facture');
+    }
+  };
+
+  const handleDeleteFacture = async (facture) => {
+    if (window.confirm(`Confirmer la suppression de ${facture.numero_facture || facture.numeroFacture} ?`)) {
+      try {
+        await deleteFacture(facture.id);
+        fetchFactures(1);
+        alert('Facture supprimée !');
+      } catch (err) {
+        console.error('Erreur lors de la suppression:', err);
+        alert('Erreur : Impossible de supprimer la facture');
+      }
+    }
+  };
+
+  const handleSearch = (value) => {
+    setSearchTerm(value);
+    if (value.trim()) {
+      searchFactures(value);
+    } else {
+      fetchFactures(1);
+    }
+  };
+
+  const handleFilterStatus = (status) => {
+    setSelectedStatus(status);
+    clearError();
+    if (status === 'all') {
+      fetchFactures(1);
+    } else {
+      filterByStatut(status);
+    }
   };
 
   return (
@@ -296,6 +354,17 @@ export default function GestionFactures() {
       />
 
       <main className="p-6 max-w-7xl mx-auto space-y-6">
+        {/* AFFICHAGE DES ERREURS API */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+            <div>
+              <p className="text-red-700 font-medium">Erreur</p>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </div>
+        )}
+
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statsCards.map((stat, i) => (
@@ -313,24 +382,32 @@ export default function GestionFactures() {
         <div className="space-y-4">
           <TableSearch
             value={searchTerm}
-            onChange={setSearchTerm}
+            onChange={handleSearch}
             placeholder="Rechercher par numéro de facture, client..."
+            disabled={loading}
           />
 
           <FilterBar
             filters={filterOptions}
-            onFilterChange={setSelectedStatus}
+            onFilterChange={handleFilterStatus}
             showSearch={false}
           />
         </div>
 
         {/* Tableau */}
-        <DataTable
-          columns={columns}
-          data={filteredFactures}
-          actions={actions}
-          itemsPerPage={5}
-        />
+        {loading && !searchTerm ? (
+          <div className="bg-white p-8 rounded-xl text-center">
+            <div className="animate-spin inline-block w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full"></div>
+            <p className="mt-4 text-gray-500">Chargement des factures...</p>
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={filteredFactures}
+            actions={actions}
+            itemsPerPage={10}
+          />
+        )}
       </main>
 
       {/* MODAL DÉTAILS FACTURE — CORRIGÉ */}
@@ -384,13 +461,15 @@ export default function GestionFactures() {
             <div className="flex gap-3 pt-4">
               <button
                 onClick={confirmMarkAsPaid}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+                disabled={submitLoading}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Oui
+                {submitLoading ? 'Traitement...' : 'Oui'}
               </button>
               <button
                 onClick={closeConfirmModal}
-                className="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 font-semibold"
+                disabled={submitLoading}
+                className="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Non
               </button>

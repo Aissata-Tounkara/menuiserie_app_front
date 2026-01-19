@@ -20,7 +20,7 @@ import { MESSAGES } from './lib/utils/constants';
 
 export default function CreationDevis() {
   // --- ZUSTAND STORES ---
-  const { createDevis, validateAndInvoice, error: devisError, clearError: clearDevisError } = useDevisStore();
+  const { createDevis, convertToOrder, error: devisError, clearError: clearDevisError } = useDevisStore();
   const { clients, loading: clientsLoading, fetchClients } = useClientsStore();
 
   // --- ÉTATS LOCAUX ---
@@ -29,6 +29,7 @@ export default function CreationDevis() {
   const [showClientModal, setShowClientModal] = useState(false);
   const [lignesDevis, setLignesDevis] = useState([]);
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [createdDevis, setCreatedDevis] = useState(null); // Stocker le devis créé pour conversion
   const [currentLigne, setCurrentLigne] = useState({
     produit: '',
     categorie: '',
@@ -203,16 +204,14 @@ export default function CreationDevis() {
       console.log('Données envoyées au backend:', devisData);
 
       // Créer le devis via l'API
-     // Remplacez votre bloc de succès par celui-ci :
-const createdDevis = await createDevis(devisData);
+      const responseDevis = await createDevis(devisData);
 
-// On cherche l'ID dans createdDevis ou createdDevis.data
-const devisId = createdDevis?.id || createdDevis?.data?.id;
+      // Stocker le devis créé pour permettre la conversion en commande
+      setCreatedDevis(responseDevis);
 
-alert(`Devis créé avec succès (ID: ${devisId}).`);
-
-      // Redirection vers la gestion des devis
-      navigate('/gestion-devis');
+      alert(`Devis créé avec succès (ID: ${responseDevis?.id}). Vous pouvez maintenant le convertir en commande.`);
+      
+      // NE PAS rediriger immédiatement - laisser l'utilisateur convertir en commande
       
       // Réinitialiser le formulaire
       setSelectedClient(null);
@@ -250,6 +249,47 @@ alert(`Devis créé avec succès (ID: ${devisId}).`);
 } finally {
   setSubmitLoading(false);
 } 
+  };
+
+  const handleConvertToOrder = async () => {
+    if (!createdDevis) {
+      alert('Veuillez d\'abord créer un devis');
+      return;
+    }
+
+    setSubmitLoading(true);
+    try {
+      // Convertir le devis en commande
+      const order = await convertToOrder(createdDevis.id, {
+        client_id: selectedClient.id,
+        articles: lignesDevis
+      });
+
+      alert(`Commande créée avec succès (ID: ${order?.id})`);
+      
+      // Rediriger vers la gestion des commandes
+      navigate('/gestion-commandes', { state: { createdFromDevis: order.id } });
+      
+      // Réinitialiser le formulaire complet
+      setSelectedClient(null);
+      setLignesDevis([]);
+      setCreatedDevis(null);
+      setSearchClient('');
+      setDevisInfo({
+        dateEmission: new Date().toISOString().split('T')[0],
+        validite: 30,
+        remise: 0,
+        acompte: 0,
+        delaiLivraison: '2-3 semaines',
+        conditionsPaiement: 'Paiement à la livraison'
+      });
+
+    } catch (error) {
+      console.error('Erreur lors de la conversion:', error);
+      alert('Erreur : ' + (error.message || 'Impossible de convertir le devis en commande'));
+    } finally {
+      setSubmitLoading(false);
+    }
   };
 
   const handleAddNewClient = async () => {
@@ -725,9 +765,20 @@ alert(`Devis créé avec succès (ID: ${devisId}).`);
                 <Button
                   fullWidth
                   variant="outline"
-                  disabled={!selectedClient || lignesDevis.length === 0}
+                  disabled={!createdDevis || !selectedClient || lignesDevis.length === 0 || submitLoading}
+                  onClick={handleConvertToOrder}
+                  className={submitLoading ? 'opacity-70 cursor-not-allowed' : ''}
                 >
-                  <CheckCircle className="w-4 h-4" /> Convertir en commande
+                  {submitLoading ? (
+                    <>
+                      <div className="inline-block w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Conversion...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" /> Convertir en commande
+                    </>
+                  )}
                 </Button>
               </div>
 
