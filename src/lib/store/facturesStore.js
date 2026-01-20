@@ -23,7 +23,7 @@ export const useFacturesStore = create((set, get) => ({
         search: '',
         statut: '',
         client_id: '',
-        sortBy: 'date_facture',
+        sortBy: 'date_emission',
         sortDir: 'desc',
     },
     stats: null,

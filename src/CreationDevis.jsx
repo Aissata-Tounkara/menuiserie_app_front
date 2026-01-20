@@ -37,7 +37,7 @@ export default function CreationDevis() {
     largeur: '',
     hauteur: '',
     quantite: 1,
-    Alluminium: '',
+    aluminium: '',
     vitrage: '',
     prixUnitaire: 0
   });
@@ -55,7 +55,7 @@ export default function CreationDevis() {
     { id: 2, nom: 'Portes', produits: ['Porte-2Battan', 'Porte-1Battan', 'Porte-Toilette'] },
   ];
 
-  const Alluminium = ['Champagne', 'Bronzé', 'Lac blanc', 'Naturel'];
+  const aluminium = ['Champagne', 'Bronzé', 'Lac blanc', 'Naturel'];
   const vitrages = ['vitre-claire N4', 'vitre-claire N5', 'Vitre anti-eau N4', 'Vitre anti-eau N5'];
 
   const formatsStandards = [
@@ -108,13 +108,13 @@ export default function CreationDevis() {
     const prixBase = surface * PRIX_ALU_M2;
     return Math.round(prixBase + prixBase * TAUX_MAJORATION);
   };
-  const formatDateToDDMMYYYY = (isoDate) => {
-  const d = new Date(isoDate);
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
-};
+//   const formatDateToDDMMYYYY = (isoDate) => {
+//   const d = new Date(isoDate);
+//   const day = String(d.getDate()).padStart(2, '0');
+//   const month = String(d.getMonth() + 1).padStart(2, '0');
+//   const year = d.getFullYear();
+//   return `${day}/${month}/${year}`;
+// };
 
   const ajouterLigne = () => {
     if (currentLigne.produit && (currentLigne.produit === 'Installation et pose' || (currentLigne.largeur && currentLigne.hauteur))) {
@@ -133,7 +133,7 @@ export default function CreationDevis() {
         largeur: '',
         hauteur: '',
         quantite: 1,
-        Alluminium: '',
+        aluminium: '',
         vitrage: '',
         prixUnitaire: 0
       });
@@ -152,10 +152,12 @@ export default function CreationDevis() {
 
   const calculerSousTotal = () => lignesDevis.reduce((total, ligne) => total + ligne.sousTotal, 0);
   const calculerRemise = () => Math.round(calculerSousTotal() * (devisInfo.remise / 100));
-  const calculerTotalHT = () => calculerSousTotal() - calculerRemise();
+  // const calculerTotalHT = () => calculerSousTotal() - calculerRemise();
   const calculerTVA = () => 0; // Désactivée
-  const calculerTotalTTC = () => calculerTotalHT();
-  const calculerAcompte = () => Math.round(calculerTotalTTC() * (devisInfo.acompte / 100));
+  // const calculerTotalTTC = () => calculerTotalHT();
+  // const calculerAcompte = () => Math.round(calculerTotalTTC() * (devisInfo.acompte / 100));
+  const calculerAcompte = () => Math.round(1 * (devisInfo.acompte / 100));
+
 
   const getDateValidite = () => {
     const date = new Date(devisInfo.dateEmission);
@@ -179,24 +181,25 @@ export default function CreationDevis() {
       const devisData = {
         client_id: selectedClient.id || selectedClient.id,
         date_emission: devisInfo.dateEmission,
-        statut: 'Brouillon',
+        // statut: 'accepte',
         validite: parseInt(devisInfo.validite),
         delai_livraison: devisInfo.delaiLivraison,
         conditions_paiement: devisInfo.conditionsPaiement,
-        remise_pourcentage: devisInfo.remise,
-        acompte_pourcentage: devisInfo.acompte,
+        remise: devisInfo.remise,
+        acompte: devisInfo.acompte,
         lignes: lignesDevis.map(l => ({
         produit: l.produit,
+        categorie: l.categorie || null,
         description: l.description || null,
         largeur: l.largeur ? parseFloat(l.largeur) : null,
         hauteur: l.hauteur ? parseFloat(l.hauteur) : null,
         quantite: parseInt(l.quantite, 10),
         prix_unitaire: parseFloat(l.prixUnitaire),
-        alluminium: l.Alluminium || null,
+        aluminium: l.aluminium || null,
         vitrage: l.vitrage || null
       })),
-        montant_ht: calculerTotalHT(),
-        montant_ttc: calculerTotalTTC(),
+        // total_ht: calculerTotalHT(),
+        // total_ttc: calculerTotalTTC(),
         notes: document.querySelector('textarea')?.value || ''
       };
 
@@ -209,7 +212,7 @@ export default function CreationDevis() {
       // Stocker le devis créé pour permettre la conversion en commande
       setCreatedDevis(responseDevis);
 
-      alert(`Devis créé avec succès (ID: ${responseDevis?.id}). Vous pouvez maintenant le convertir en commande.`);
+      alert(`Devis créé avec succès et convertir en commande.`);
       
       // NE PAS rediriger immédiatement - laisser l'utilisateur convertir en commande
       
@@ -566,10 +569,10 @@ export default function CreationDevis() {
                       onChange={(e) => setCurrentLigne({ ...currentLigne, hauteur: e.target.value })}
                     />
                     <Select
-                      label="Alluminium"
-                      value={currentLigne.Alluminium}
-                      onChange={(val) => setCurrentLigne({ ...currentLigne, Alluminium: val })}
-                      options={Alluminium.map(a => ({ label: a, value: a }))}
+                      label="Aluminium"
+                      value={currentLigne.aluminium}
+                      onChange={(val) => setCurrentLigne({ ...currentLigne, aluminium: val })}
+                      options={aluminium.map(a => ({ label: a, value: a }))}
                     />
                     <Select
                       label="Vitrage"
@@ -637,7 +640,7 @@ export default function CreationDevis() {
                             {ligne.produit !== 'Installation et pose' && (
                               <div>Dimensions: {ligne.largeur}m × {ligne.hauteur}m</div>
                             )}
-                            {ligne.Alluminium && <div>Alluminium: {ligne.Alluminium}</div>}
+                            {ligne.aluminium && <div>Aluminium: {ligne.aluminium}</div>}
                             {ligne.vitrage && <div>Vitrage: {ligne.vitrage}</div>}
                             <div>Quantité: {ligne.quantite} × {ligne.prixUnitaire.toLocaleString()} Fcfa</div>
                           </div>
@@ -702,7 +705,7 @@ export default function CreationDevis() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">Total HT:</span>
-                  <span className="font-semibold text-gray-900">{calculerTotalHT().toLocaleString()} Fcfa</span>
+                  {/* <span className="font-semibold text-gray-900">{calculerTotalHT().toLocaleString()} Fcfa</span> */}
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">TVA (0%):</span>
@@ -710,7 +713,7 @@ export default function CreationDevis() {
                 </div>
                 <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
                   <span className="text-lg font-bold text-gray-900">Total TTC:</span>
-                  <span className="text-2xl font-bold text-blue-600">{calculerTotalTTC().toLocaleString()} Fcfa</span>
+                  {/* <span className="text-2xl font-bold text-blue-600">{calculerTotalTTC().toLocaleString()} Fcfa</span> */}
                 </div>
               </div>
 
@@ -736,7 +739,7 @@ export default function CreationDevis() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-blue-700">Solde:</span>
-                      <span className="font-semibold text-blue-900">{(calculerTotalTTC() - calculerAcompte()).toLocaleString()} Fcfa</span>
+                      <span className="font-semibold text-blue-900">{(/*calculerTotalTTC()*/ 0 - calculerAcompte()).toLocaleString()} Fcfa</span>
                     </div>
                   </div>
                 )}
@@ -758,25 +761,6 @@ export default function CreationDevis() {
                   ) : (
                     <>
                       <Save className="w-4 h-4" /> Enregistrer le devis
-                    </>
-                  )}
-                </Button>
-              
-                <Button
-                  fullWidth
-                  variant="outline"
-                  disabled={!createdDevis || !selectedClient || lignesDevis.length === 0 || submitLoading}
-                  onClick={handleConvertToOrder}
-                  className={submitLoading ? 'opacity-70 cursor-not-allowed' : ''}
-                >
-                  {submitLoading ? (
-                    <>
-                      <div className="inline-block w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin mr-2"></div>
-                      Conversion...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-4 h-4" /> Convertir en commande
                     </>
                   )}
                 </Button>

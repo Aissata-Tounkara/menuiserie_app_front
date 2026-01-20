@@ -15,7 +15,7 @@ export const useClientsStore = create((set, get) => ({
     error: null,
     pagination: {
         total: 0,
-        per_page: 10,
+        per_page: 30,
         current_page: 1,
         last_page: 1,
     },

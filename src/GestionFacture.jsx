@@ -86,7 +86,7 @@ export default function GestionFactures() {
     return factures.map(f => ({ ...f, statutCalcule: getActualStatus(f) }))
       .filter(f => {
         const matchStatus = selectedStatus === 'all' || f.statutCalcule === selectedStatus;
-        const numeroFacture = f.numero_facture || f.numeroFacture || '';
+        const numeroFacture = f.numero_facture || f.numero_facture || '';
         const clientNom = f.client?.nom || f.clientNom || '';
         const matchSearch = 
           numeroFacture.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -104,18 +104,43 @@ export default function GestionFactures() {
     { label: 'En retard', value: 'En retard', count: factures.filter(f => getActualStatus(f) === 'En retard').length }
   ], [factures]);
 
-  // Stats
-  const calculateTotalCA = () => factures.filter(f => getActualStatus(f) === 'Payée').reduce((sum, f) => sum + (f.montant_ttc || f.montantTTC || 0), 0);
-  const calculateTotalEnAttente = () => factures
-    .filter(f => ['En attente', 'En retard'].includes(getActualStatus(f)))
-    .reduce((sum, f) => sum + ((f.montant_ttc || f.montantTTC || 0) - (f.montant_paye || f.montantPaye || 0)), 0);
+// Stats depuis le backend (toujours globales, non filtrées)
+const statsCards = useMemo(() => {
+  // Extraire les vraies stats depuis stats.data
+  const data = stats?.data || {};
+  
+  const total = data.total ?? 0;
+  const chiffreAffaires = data.chiffre_affaires ?? 0;
+  const payees = data.payees ?? 0;
+  const encours = data.encours ?? 0;
 
-  const statsCards = [
-    { label: 'Total factures', value: factures.length, icon: FileText, color: 'bg-blue-500' },
-    { label: 'Chiffre d\'affaires', value: `${calculateTotalCA().toLocaleString()} Fcfa`, icon: DollarSign, color: 'bg-green-500' },
-    { label: 'En attente', value: `${calculateTotalEnAttente().toLocaleString()} Fcfa`, icon: Clock, color: 'bg-orange-500' },
-    { label: 'Factures payées', value: factures.filter(f => getActualStatus(f) === 'Payée').length, icon: CheckCircle, color: 'bg-purple-500' }
+  return [
+    {
+      label: 'Total factures',
+      value: total,
+      icon: FileText,
+      color: 'bg-blue-500'
+    },
+    {
+      label: 'Chiffre d\'affaires',
+      value: `${Math.round(chiffreAffaires).toLocaleString()} Fcfa`,
+      icon: DollarSign,
+      color: 'bg-green-500'
+    },
+    {
+      label: 'En attente',
+      value: `${Math.round(encours).toLocaleString()} Fcfa`,
+      icon: Clock,
+      color: 'bg-orange-500'
+    },
+    {
+      label: 'Factures payées',
+      value: payees,
+      icon: CheckCircle,
+      color: 'bg-purple-500'
+    }
   ];
+}, [stats]);
 
   // Colonnes du DataTable
   const columns = [
@@ -264,8 +289,9 @@ export default function GestionFactures() {
     setSubmitLoading(true);
     try {
       await markAsPaid(factureToConfirm.id, {
-        montant_paye: factureToConfirm.montant_ttc || factureToConfirm.montantTTC,
-        date_paiement: new Date().toISOString().split('T')[0]
+       montant_paye: factureToConfirm.montant_ttc || factureToConfirm.montantTTC,
+      mode_paiement: "Espèces", // ou "Virement", "Mobile Money", etc.
+      date_paiement: new Date().toISOString().split('T')[0]
       });
       
       // Recharger la liste
@@ -343,14 +369,6 @@ export default function GestionFactures() {
           { label: 'Gestion des devis', href: '/gestion-devis' },
           { label: 'Gestion des dépenses', href: '/gestion-depenses' }
         ]}
-        actions={[
-          {
-            label: 'Exporter',
-            icon: <Download className="w-4 h-4" />,
-            onClick: () => alert('Export CSV'),
-            variant: 'secondary'
-          }
-        ]}
       />
 
       <main className="p-6 max-w-7xl mx-auto space-y-6">
@@ -413,19 +431,13 @@ export default function GestionFactures() {
       {/* MODAL DÉTAILS FACTURE — CORRIGÉ */}
       <Modal
         isOpen={showModal}
-        title={`Facture ${selectedFacture?.numeroFacture || ''}`}
+        title={`Facture ${selectedFacture?.numero_facture || ''}`}
         onClose={closeModal}
       >
         {selectedFacture && (
           <>
             <InvoicePrintView facture={selectedFacture} />
             <div className="mt-6 pt-4 border-t border-gray-200 text-center">
-              <button
-                onClick={() => window.print()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-              >
-                Imprimer cette facture
-              </button>
             </div>
           </>
         )}
@@ -443,14 +455,14 @@ export default function GestionFactures() {
               <AlertCircle className="w-8 h-8 text-orange-600" />
               <div>
                 <p className="text-gray-900 font-semibold">Marquer cette facture comme payée ?</p>
-                <p className="text-sm text-gray-500 mt-1">{factureToConfirm.numeroFacture}</p>
+                <p className="text-sm text-gray-500 mt-1">{factureToConfirm.numero_facture}</p>
               </div>
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4 text-sm">
               <div className="flex justify-between mb-2">
                 <span className="text-gray-600">Montant TTC:</span>
-                <span className="font-semibold text-gray-900">{factureToConfirm.montantTTC.toLocaleString()} Fcfa</span>
+                <span className="font-semibold text-gray-900">{factureToConfirm.montant_ttc.toLocaleString()} Fcfa</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Client:</span>

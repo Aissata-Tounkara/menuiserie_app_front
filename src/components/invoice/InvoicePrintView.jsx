@@ -9,10 +9,16 @@ const InvoicePrintView = ({ facture }) => {
     return dateStr; // format déjà dd/mm/yyyy
   };
 
-  // Calcul du statut actuel
+  // Calcul du statut actuel — sécurisé contre date_echeance manquante
   const getActualStatus = () => {
-    if (facture.montantPaye >= facture.montantTTC) return 'Payée';
-    const [jour, mois, annee] = facture.dateEcheance.split('/');
+    if (facture.montant_paye >= facture.montant_ttc) return 'Payée';
+
+    if (!facture.date_echeance) return 'En attente';
+
+    const parts = facture.date_echeance.split('/');
+    if (parts.length !== 3) return 'En attente';
+
+    const [jour, mois, annee] = parts;
     const echeanceDate = new Date(annee, mois - 1, jour);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -24,21 +30,23 @@ const InvoicePrintView = ({ facture }) => {
 
   // Couleurs par statut
   const getStatusColor = (statut) => {
-    switch(statut) {
-      case 'Payée': return 'text-green-600 bg-green-50 border-green-200';
-      case 'En attente': return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'En retard': return 'text-red-600 bg-red-50 border-red-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+    switch (statut) {
+      case 'Payée':
+        return 'text-green-600 bg-green-50 border-green-200';
+      case 'En attente':
+        return 'text-blue-600 bg-blue-50 border-blue-200';
+      case 'En retard':
+        return 'text-red-600 bg-red-50 border-red-200';
+      default:
+        return 'text-gray-600 bg-gray-50 border-gray-200';
     }
   };
 
   return (
     <div className="invoice-print max-w-4xl mx-auto p-8 bg-white">
-      {/* EN-TÊTE NOIR COMME SUR LA PHOTO */}
+      {/* EN-TÊTE NOIR */}
       <div className="bg-gray-900 text-white rounded-t-xl p-6 flex justify-between items-start">
-        {/* Logo + Nom entreprise */}
         <div className="flex items-center gap-3">
-          {/* Logo carré vert avec "T" */}
           <div className="bg-teal-500 w-12 h-12 rounded-lg flex items-center justify-center">
             <span className="text-white text-2xl font-bold">T</span>
           </div>
@@ -48,17 +56,16 @@ const InvoicePrintView = ({ facture }) => {
           </div>
         </div>
 
-        {/* FACTURE + Date */}
         <div className="text-right">
           <h2 className="text-3xl font-extrabold mb-2">FACTURE</h2>
           <div className="bg-gray-800 rounded-md px-4 py-2 inline-block">
             <div className="text-xs text-teal-300">Date d'émission</div>
-            <div className="font-semibold">{formatDate(facture.dateEmission)}</div>
+            <div className="font-semibold">{formatDate(facture.date_emission)}</div>
           </div>
         </div>
       </div>
 
-      {/* Informations de l'entreprise (sous l'en-tête noir) */}
+      {/* Informations de l'entreprise */}
       <div className="border-b border-gray-200 pb-6 pt-4">
         <div className="text-sm space-y-1">
           <div><strong>Chez Moussa TOUNKARA</strong></div>
@@ -73,21 +80,22 @@ const InvoicePrintView = ({ facture }) => {
         <div>
           <h3 className="font-semibold text-gray-900 mb-2">Informations Client</h3>
           <div className="space-y-1">
-            <div><strong>Nom :</strong> {facture.client.nom}</div>
-            <div><strong>Téléphone :</strong> {facture.client.tel}</div>
-            <div><strong>Email :</strong> {facture.client.email}</div>
-            <div><strong>Adresse :</strong> {facture.client.adresse}</div>
+            <div><strong>Nom :</strong> {facture.client?.nom || ''}</div>
+            <div><strong>Téléphone :</strong> {facture.client?.telephone || ''}</div>
+            <div><strong>Email :</strong> {facture.client?.email || ''}</div>
+            <div><strong>Adresse :</strong> {facture.client?.adresse || ''}</div>
           </div>
         </div>
 
         <div>
           <h3 className="font-semibold text-gray-900 mb-2">Détails de la Facture</h3>
           <div className="space-y-1">
-            <div><strong>Numéro :</strong> {facture.numeroFacture}</div>
+            <div><strong>Numéro :</strong> {facture.numero_facture}</div>
             <div><strong>Commande :</strong> {facture.commande}</div>
-            <div><strong>Date émission :</strong> {formatDate(facture.dateEmission)}</div>
-            <div><strong>Date d’échéance :</strong> {formatDate(facture.dateEcheance)}</div>
-            <div><strong>Statut :</strong> 
+            <div><strong>Date émission :</strong> {formatDate(facture.date_emission)}</div>
+            <div><strong>Date d’échéance :</strong> {formatDate(facture.date_echeance)}</div>
+            <div>
+              <strong>Statut :</strong>
               <span className={`px-3 py-1 rounded-full text-xs font-medium ml-2 ${getStatusColor(status)}`}>
                 {status}
               </span>
@@ -109,12 +117,12 @@ const InvoicePrintView = ({ facture }) => {
             </tr>
           </thead>
           <tbody>
-            {facture.articles.map((article, idx) => (
+            {(facture.articles || []).map((article, idx) => (
               <tr key={idx} className="border-b border-gray-200">
                 <td className="py-2 px-3 text-sm">{article.designation}</td>
                 <td className="py-2 px-3 text-sm text-center">{article.quantite}</td>
-                <td className="py-2 px-3 text-sm text-right">{article.prixUnitaire.toLocaleString()} Fcfa</td>
-                <td className="py-2 px-3 text-sm font-semibold text-right">{article.total.toLocaleString()} Fcfa</td>
+                <td className="py-2 px-3 text-sm text-right">{(article.prix_unitaire || 0).toLocaleString()} Fcfa</td>
+                <td className="py-2 px-3 text-sm font-semibold text-right">{(article.total || 0).toLocaleString()} Fcfa</td>
               </tr>
             ))}
           </tbody>
@@ -126,26 +134,26 @@ const InvoicePrintView = ({ facture }) => {
         <div className="space-y-2">
           <div className="flex justify-between">
             <span>Sous-total HT:</span>
-            <span>{facture.montantHT.toLocaleString()} Fcfa</span>
+            <span>{(facture.montant_ht || 0).toLocaleString()} Fcfa</span>
           </div>
           <div className="flex justify-between">
             <span>TVA (0%):</span>
-            <span>{facture.tva.toLocaleString()} Fcfa</span>
+            <span>{(facture.tva || 0).toLocaleString()} Fcfa</span>
           </div>
           <div className="border-t border-gray-300 pt-2 flex justify-between font-bold text-lg">
             <span>Total TTC:</span>
-            <span className="text-blue-600">{facture.montantTTC.toLocaleString()} Fcfa</span>
+            <span className="text-blue-600">{(facture.montant_ttc || 0).toLocaleString()} Fcfa</span>
           </div>
-          {facture.montantPaye > 0 && (
+          {facture.montant_paye > 0 && (
             <>
               <div className="flex justify-between text-green-600">
                 <span>Montant payé:</span>
-                <span>{facture.montantPaye.toLocaleString()} Fcfa</span>
+                <span>{(facture.montant_paye || 0).toLocaleString()} Fcfa</span>
               </div>
-              {facture.montantTTC - facture.montantPaye > 0 && (
+              {facture.montant_ttc - facture.montant_paye > 0 && (
                 <div className="flex justify-between text-orange-600">
                   <span>Reste à payer:</span>
-                  <span>{(facture.montantTTC - facture.montantPaye).toLocaleString()} Fcfa</span>
+                  <span>{(facture.montant_ttc - facture.montant_paye).toLocaleString()} Fcfa</span>
                 </div>
               )}
             </>
@@ -163,11 +171,11 @@ const InvoicePrintView = ({ facture }) => {
           <div className="text-sm text-green-800 space-y-1 ml-8">
             <div className="flex items-center gap-2">
               <CreditCard className="w-4 h-4" />
-              Mode: {facture.modePaiement}
+              Mode: {facture.mode_paiement || 'Non spécifié'}
             </div>
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
-              Date: {formatDate(facture.datePaiement)}
+              Date: {formatDate(facture.date_paiement)}
             </div>
           </div>
         </div>

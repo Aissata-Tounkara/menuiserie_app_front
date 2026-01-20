@@ -120,6 +120,6 @@ export const facturesService = {
      */
     async exportPDF(id) {
         if (!id) throw new Error('L\'ID de la facture est requis');
-        return await apiClient.download(`${ENDPOINTS.INVOICES.DETAIL(id)}/export-pdf`);
+        return await apiClient.download(`${ENDPOINTS.INVOICES.DETAIL(id)}/telecharger-pdf`);
     },
 };

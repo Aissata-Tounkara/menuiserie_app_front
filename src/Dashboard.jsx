@@ -24,7 +24,7 @@ export default function Dashboard() {
   } = useDashboardStore();
 
   // Local state
-  const [recentOrders, setRecentOrders] = useState([]);
+ 
 
   // Charger les données au montage
   useEffect(() => {
@@ -46,52 +46,51 @@ export default function Dashboard() {
 
   // Configuration des colonnes — compatible avec le nouveau DataTable
   const columns = [
-    { 
-      header: 'Commande', 
-      key: 'id',
-      render: (value, row) => (
-        <div>
-          <div className="font-semibold text-gray-900">{value}</div>
-          <div className="text-xs text-gray-500">{row.date}</div>
-        </div>
-      )
-    },
-    { 
-      header: 'Client', 
-      key: 'client',
-      render: (value) => <span className="text-sm text-gray-700">{value}</span>
-    },
-    { 
-      header: 'Produit', 
-      key: 'produit',
-      render: (value) => <span className="text-sm text-gray-700">{value}</span>
-    },
-    { 
-      header: 'Montant', 
-      key: 'montant',
-      render: (value) => <span className="text-sm font-semibold text-gray-900">{value.toLocaleString('fr-FR')} FCFA</span>
-    },
-    { 
-      header: 'Statut', 
-      key: 'statut',
-      render: (value) => {
-        const getStatutColor = (statut) => {
-          switch(statut) {
-            case 'Livrée': return 'bg-green-100 text-green-800';
-            case 'En production': return 'bg-blue-100 text-blue-800';
-            case 'En attente': return 'bg-yellow-100 text-yellow-800';
-            default: return 'bg-gray-100 text-gray-800';
-          }
-        };
-        
-        return (
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatutColor(value)}`}>
-            {value}
-          </span>
-        );
-      }
+  { 
+    header: 'Commande', 
+    key: 'numero_commande',
+    render: (_, row) => (
+      <div>
+        <div className="font-semibold text-gray-900">{row.numero_commande}</div>
+        <div className="text-xs text-gray-500">{row.date}</div>
+      </div>
+    )
+  },
+  { 
+    header: 'Client', 
+    key: 'client',
+    render: (value) => <span className="text-sm text-gray-700">{value}</span>
+  },
+  { 
+    header: 'Montant', 
+    key: 'montant_ttc',
+    render: (value) => (
+      <span className="text-sm font-semibold text-gray-900">
+        {value ? value.toLocaleString('fr-FR') : '0'} FCFA
+      </span>
+    )
+  },
+  { 
+    header: 'Statut', 
+    key: 'statut',
+    render: (value) => {
+      const getStatutColor = (statut) => {
+        switch(statut) {
+          case 'Livrée': return 'bg-green-100 text-green-800';
+          case 'En production': return 'bg-blue-100 text-blue-800';
+          case 'En attente': return 'bg-yellow-100 text-yellow-800';
+          default: return 'bg-gray-100 text-gray-800';
+        }
+      };
+      
+      return (
+        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatutColor(value)}`}>
+          {value}
+        </span>
+      );
     }
-  ];
+  }
+];
 
   const navigationLinks = [
     { label: 'Gestion clients', href: '/gestion-clients' },
@@ -104,7 +103,7 @@ export default function Dashboard() {
 
   const selectConfig = {
     value: selectedPeriod,
-    onChange: (e) => setPeriod(e.target.value),
+    onChange: (value) => setPeriod(value),
     options: [
       { value: 'semaine', label: 'Cette semaine' },
       { value: 'mois', label: 'Ce mois' },
@@ -114,17 +113,18 @@ export default function Dashboard() {
   };
 
   // Données des stats basées sur l'API
-  const totalRevenus = dashboardStats?.total_revenue || 0;
-  const totalClients = dashboardStats?.total_clients || 0;
-  const totalProducts = dashboardStats?.total_products || 0;
-  const totalOrders = dashboardStats?.total_orders || 0;
-  const stockAlerts = dashboardStats?.stock_alerts || 0;
-  const pendingQuotes = dashboardStats?.pending_quotes || 0;
-  const readyDeliveries = dashboardStats?.ready_deliveries || 0;
+  const totalRevenus = dashboardStats?.stats?.revenus || 0;
+const totalClients = dashboardStats?.stats?.clients_actifs || 0;
+const totalProducts = dashboardStats?.stats?.produits || 0;
+const totalOrders = dashboardStats?.stats?.commandes || 0;
+// Alertes
+const stockAlerts = dashboardStats?.alertes?.stock_faible || 0;
+const pendingQuotes = dashboardStats?.alertes?.devis_en_attente || 0;
+const readyDeliveries = dashboardStats?.alertes?.livraisons_du_jour || 0;
 
   const statsData = [
     { icon: ShoppingCart, value: totalOrders, label: 'Commandes du mois', iconColor: 'bg-blue-500' },
-    { icon: DollarSign, value: `${totalRevenus.toLocaleString('fr-FR')} DA`, label: 'Revenus', iconColor: 'bg-green-500' },
+    { icon: DollarSign, value: `${totalRevenus.toLocaleString('fr-FR')} Fcfa`, label: 'Revenus', iconColor: 'bg-green-500' },
     { icon: Users, value: totalClients, label: 'Clients actifs', iconColor: 'bg-purple-500' },
     { icon: Package, value: totalProducts, label: 'Produits', iconColor: 'bg-orange-500' }
   ];
@@ -190,13 +190,13 @@ export default function Dashboard() {
                 {/* Utilisation directe de DataTable */}
                 <DataTable 
                   columns={columns}
-                  data={recentOrders.length > 0 ? recentOrders : []}
+                  data={dashboardStats?.commandes_recentes || []}
                   itemsPerPage={5}
                 />
-                {recentOrders.length === 0 && (
-                  <div className="bg-gray-50 rounded-lg p-6 text-center text-gray-500">
-                    Aucune commande récente disponible
-                  </div>
+                {(!dashboardStats?.commandes_recentes || dashboardStats.commandes_recentes.length === 0) && (
+                <div className="bg-gray-50 rounded-lg p-6 text-center text-gray-500">
+                  Aucune commande récente disponible
+                </div>
                 )}
               </div>
 

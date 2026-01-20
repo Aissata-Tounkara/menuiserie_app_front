@@ -125,26 +125,45 @@ const GestionClients = () => {
       key: 'typeClient',
       type: 'badge' // géré par getStatusStyle
     },
-    {
-      header: 'Total Achats',
-      key: 'total_achats',
-      render: (_, row) => {
-        // Sécurisation : on force à 0 si la valeur est undefined ou null
-        const total = row.total_achats ?? 0;
-        const nbCommandes = row.nombre_commandes ?? 0;
+    
+  {
+  header: 'Commandes',
+  key: 'nombre_commandes', // Vérifiez bien que c'est nombre_commandes
+  render: (_, row) => {
+    // Le problème vient souvent d'ici : essayez de lire les deux variantes au cas où
+    const nb = row.nombre_commandes ?? row.nombreCommandes ?? 0;
+    
+    return (
+      <div className="flex items-center gap-2">
+        <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium border border-blue-100">
+          {nb}
+        </span>
+        <span className="text-xs text-gray-500">cmd(s)</span>
+      </div>
+    );
+  }
+},
+    
+{
+  header: 'Total Achats',
+  key: 'total_achats',
+  render: (_, row) => {
+    // Force la conversion en nombre pour éviter les erreurs d'affichage
+    const total = parseFloat(row.total_achats || 0);
+    const nbCommandes = parseInt(row.nombre_commandes || 0); // Notez le nombre_commandes (snake_case)
 
-        return (
-          <div>
-            <div className="font-semibold text-gray-900">
-              {Number(total).toLocaleString()} FCFA
-            </div>
-            <div className="text-xs text-gray-500">
-              {nbCommandes} commandes
-            </div>
-          </div>
-        );
-      }
-    },
+    return (
+      <div>
+        <div className="font-semibold text-gray-900">
+          {total.toLocaleString('fr-FR')} FCFA
+        </div>
+        <div className="text-xs text-gray-500">
+          {nbCommandes} {nbCommandes > 1 ? 'commandes' : 'commande'}
+        </div>
+      </div>
+    );
+  }
+},
     {
       header: 'Statut',
       key: 'statut',
@@ -229,24 +248,28 @@ const formFields = [
   };
 
   const handleFormSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitLoading(true);
+  e.preventDefault();
+  setSubmitLoading(true);
 
-    try {
-      if (modalMode === 'add') {
-        await createClient(formData);
-      } else if (modalMode === 'edit') {
-        await updateClient(selectedClient.id, formData);
-      }
-      setShowModal(false);
-      // Recharger la liste
-      fetchClients(1);
-    } catch (err) {
-      console.error('Erreur lors de la sauvegarde:', err);
-    } finally {
-      setSubmitLoading(false);
+  try {
+    if (modalMode === 'add') {
+      await createClient(formData);
+    } else if (modalMode === 'edit') {
+      await updateClient(selectedClient.id, formData);
     }
-  };
+    
+    setShowModal(false);
+
+    // 🔥 ACTIONS DE SYNCHRONISATION CRUCIALES
+    await fetchClients(1); // Recharge la liste
+    await fetchStats();    // Recharge les compteurs du haut (Chiffre d'affaires, etc.)
+    
+  } catch (err) {
+    console.error('Erreur lors de la sauvegarde:', err);
+  } finally {
+    setSubmitLoading(false);
+  }
+};
 
   const handleDeleteClient = async (client) => {
     if (window.confirm(`Confirmer la suppression de ${client.prenom} ${client.nom} ?`)) {
@@ -309,31 +332,31 @@ const formFields = [
 
         {/* STATS */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard 
-            label="Total Clients" 
-            value={clients.length || 0} 
-            icon={User} 
-            iconColor="bg-blue-600" 
-          />
-          <StatCard 
-            label="Commandes" 
-            value={stats?.totalOrders || 0} 
-            icon={ShoppingCart} 
-            iconColor="bg-orange-500" 
-          />
-          <StatCard 
-            label="Chiffre d'affaires" 
-            value={stats ? `${(stats.total_achats / 1000000).toFixed(2)} Fcfa` : '0 Fcfa'} 
-            icon={TrendingUp} 
-            iconColor="bg-green-600" 
-          />
-          <StatCard 
-            label="Nouveaux (30j)" 
-            value={stats?.newClientsMonth || 0} 
-            icon={Plus} 
-            iconColor="bg-purple-600" 
-          />
-        </div>
+        <StatCard 
+          label="Total Clients" 
+          value={stats?.total_clients || 0} 
+          icon={User} 
+          iconColor="bg-blue-600" 
+        />
+        <StatCard 
+          label="Commandes" 
+          value={stats?.total_commandes || 0} 
+          icon={ShoppingCart} 
+          iconColor="bg-orange-500" 
+        />
+        <StatCard 
+          label="Chiffre d'affaires" 
+          value={`${Number(stats?.total_achats || 0).toLocaleString()} FCFA`} 
+          icon={TrendingUp} 
+          iconColor="bg-green-600" 
+        />
+        <StatCard 
+          label="Nouveaux (30j)" 
+          value={stats?.newClientsMonth || 0} 
+          icon={Plus} 
+          iconColor="bg-purple-600" 
+        />
+      </div>
 
         {/* BARRE DE RECHERCHE */}
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
@@ -349,6 +372,8 @@ const formFields = [
             />
           </div>
         </div>
+        
+       
 
         {/* TABLEAU */}
         {loading && !searchTerm ? (
