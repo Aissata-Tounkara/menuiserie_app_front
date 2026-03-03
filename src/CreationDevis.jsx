@@ -17,10 +17,11 @@ import Form from './components/ui/Form';
 import { useDevisStore } from './lib/store/devisStore';
 import { useClientsStore } from './lib/store/clientsStore';
 import { MESSAGES } from './lib/utils/constants';
+import { clientsService } from './lib/services/clients.service';
 
 export default function CreationDevis() {
   // --- ZUSTAND STORES ---
-  const { createDevis, convertToOrder, error: devisError, clearError: clearDevisError } = useDevisStore();
+  const { createDevis, validateAndInvoice, error: devisError, clearError: clearDevisError } = useDevisStore();
   const { clients, loading: clientsLoading, fetchClients } = useClientsStore();
 
   // --- ÉTATS LOCAUX ---
@@ -29,7 +30,6 @@ export default function CreationDevis() {
   const [showClientModal, setShowClientModal] = useState(false);
   const [lignesDevis, setLignesDevis] = useState([]);
   const [submitLoading, setSubmitLoading] = useState(false);
-  const [createdDevis, setCreatedDevis] = useState(null); // Stocker le devis créé pour conversion
   const [currentLigne, setCurrentLigne] = useState({
     produit: '',
     categorie: '',
@@ -37,7 +37,7 @@ export default function CreationDevis() {
     largeur: '',
     hauteur: '',
     quantite: 1,
-    aluminium: '',
+    Alluminium: '',
     vitrage: '',
     prixUnitaire: 0
   });
@@ -55,7 +55,7 @@ export default function CreationDevis() {
     { id: 2, nom: 'Portes', produits: ['Porte-2Battan', 'Porte-1Battan', 'Porte-Toilette'] },
   ];
 
-  const aluminium = ['Champagne', 'Bronzé', 'Lac blanc', 'Naturel'];
+  const Alluminium = ['Champagne', 'Bronzé', 'Lac blanc', 'Naturel'];
   const vitrages = ['vitre-claire N4', 'vitre-claire N5', 'Vitre anti-eau N4', 'Vitre anti-eau N5'];
 
   const formatsStandards = [
@@ -79,6 +79,7 @@ export default function CreationDevis() {
     delaiLivraison: '2-3 semaines',
     conditionsPaiement: 'Paiement à la livraison'
   });
+  const [notes, setNotes] = useState('');
 
   const [newClientData, setNewClientData] = useState({
     nom: '',
@@ -92,6 +93,9 @@ export default function CreationDevis() {
     statut: 'Actif',
     date_inscription: new Date().toISOString().split('T')[0]
   });
+    
+
+  
   // === LOGIQUE MÉTIER ===
   const calculatePrix = (produit, largeur, hauteur) => {
     if (!largeur || !hauteur) return 0;
@@ -108,13 +112,7 @@ export default function CreationDevis() {
     const prixBase = surface * PRIX_ALU_M2;
     return Math.round(prixBase + prixBase * TAUX_MAJORATION);
   };
-//   const formatDateToDDMMYYYY = (isoDate) => {
-//   const d = new Date(isoDate);
-//   const day = String(d.getDate()).padStart(2, '0');
-//   const month = String(d.getMonth() + 1).padStart(2, '0');
-//   const year = d.getFullYear();
-//   return `${day}/${month}/${year}`;
-// };
+ 
 
   const ajouterLigne = () => {
     if (currentLigne.produit && (currentLigne.produit === 'Installation et pose' || (currentLigne.largeur && currentLigne.hauteur))) {
@@ -133,7 +131,7 @@ export default function CreationDevis() {
         largeur: '',
         hauteur: '',
         quantite: 1,
-        aluminium: '',
+        Alluminium: '',
         vitrage: '',
         prixUnitaire: 0
       });
@@ -148,16 +146,16 @@ export default function CreationDevis() {
   }));
 };
 
+
+
   const supprimerLigne = (id) => setLignesDevis(lignesDevis.filter(l => l.id !== id));
 
   const calculerSousTotal = () => lignesDevis.reduce((total, ligne) => total + ligne.sousTotal, 0);
   const calculerRemise = () => Math.round(calculerSousTotal() * (devisInfo.remise / 100));
-  // const calculerTotalHT = () => calculerSousTotal() - calculerRemise();
+  const calculerTotalHT = () => calculerSousTotal() - calculerRemise();
   const calculerTVA = () => 0; // Désactivée
-  // const calculerTotalTTC = () => calculerTotalHT();
-  // const calculerAcompte = () => Math.round(calculerTotalTTC() * (devisInfo.acompte / 100));
-  const calculerAcompte = () => Math.round(1 * (devisInfo.acompte / 100));
-
+  const calculerTotalTTC = () => calculerTotalHT();
+  const calculerAcompte = () => Math.round(calculerTotalTTC() * (devisInfo.acompte / 100));
 
   const getDateValidite = () => {
     const date = new Date(devisInfo.dateEmission);
@@ -180,41 +178,38 @@ export default function CreationDevis() {
       // Préparer les données du devis
       const devisData = {
         client_id: selectedClient.id || selectedClient.id,
-        date_emission: devisInfo.dateEmission,
-        // statut: 'accepte',
+        date_emission: devisInfo.dateEmission, // déjà au format "YYYY-MM-DD"
+        statut: 'Brouillon',
         validite: parseInt(devisInfo.validite),
         delai_livraison: devisInfo.delaiLivraison,
         conditions_paiement: devisInfo.conditionsPaiement,
-        remise: devisInfo.remise,
-        acompte: devisInfo.acompte,
+        remise_pourcentage: devisInfo.remise,
+        acompte_pourcentage: devisInfo.acompte,
         lignes: lignesDevis.map(l => ({
         produit: l.produit,
-        categorie: l.categorie || null,
         description: l.description || null,
         largeur: l.largeur ? parseFloat(l.largeur) : null,
         hauteur: l.hauteur ? parseFloat(l.hauteur) : null,
         quantite: parseInt(l.quantite, 10),
         prix_unitaire: parseFloat(l.prixUnitaire),
-        aluminium: l.aluminium || null,
+        alluminium: l.Alluminium || null,
         vitrage: l.vitrage || null
       })),
-        // total_ht: calculerTotalHT(),
-        // total_ttc: calculerTotalTTC(),
-        notes: document.querySelector('textarea')?.value || ''
+        montant_ht: calculerTotalHT(),
+        montant_ttc: calculerTotalTTC(),
+        notes: notes
       };
 
           // 🔍 Debug : afficher les données envoyées
       console.log('Données envoyées au backend:', devisData);
 
       // Créer le devis via l'API
-      const responseDevis = await createDevis(devisData);
+      const createdDevis = await createDevis(devisData);
+      // Afficher le succès
+      alert(`Devis créé avec succès (ID: ${createdDevis.id}).`);
 
-      // Stocker le devis créé pour permettre la conversion en commande
-      setCreatedDevis(responseDevis);
-
-      alert(`Devis créé avec succès et convertir en commande.`);
-      
-      // NE PAS rediriger immédiatement - laisser l'utilisateur convertir en commande
+      // Redirection vers la gestion des devis
+      navigate('/gestion-devis');
       
       // Réinitialiser le formulaire
       setSelectedClient(null);
@@ -254,114 +249,39 @@ export default function CreationDevis() {
 } 
   };
 
-  const handleConvertToOrder = async () => {
-    if (!createdDevis) {
-      alert('Veuillez d\'abord créer un devis');
+const handleAddNewClient = async () => {
+  try {
+    if (!newClientData.nom || !newClientData.telephone) {
+      alert('Nom et téléphone sont requis');
       return;
     }
 
-    setSubmitLoading(true);
-    try {
-      // Convertir le devis en commande
-      const order = await convertToOrder(createdDevis.id, {
-        client_id: selectedClient.id,
-        articles: lignesDevis
-      });
+    const response = await clientsService.createClient(newClientData);
 
-      alert(`Commande créée avec succès (ID: ${order?.id})`);
-      
-      // Rediriger vers la gestion des commandes
-      navigate('/gestion-commandes', { state: { createdFromDevis: order.id } });
-      
-      // Réinitialiser le formulaire complet
-      setSelectedClient(null);
-      setLignesDevis([]);
-      setCreatedDevis(null);
-      setSearchClient('');
-      setDevisInfo({
-        dateEmission: new Date().toISOString().split('T')[0],
-        validite: 30,
-        remise: 0,
-        acompte: 0,
-        delaiLivraison: '2-3 semaines',
-        conditionsPaiement: 'Paiement à la livraison'
-      });
+    // 💡 LA CORRECTION EST ICI : 
+    // Si response.data existe, on prend response.data, sinon on prend response.
+    const createdClient = response.data ? response.data : response;
 
-    } catch (error) {
-      console.error('Erreur lors de la conversion:', error);
-      alert('Erreur : ' + (error.message || 'Impossible de convertir le devis en commande'));
-    } finally {
-      setSubmitLoading(false);
-    }
-  };
+    const { addClient } = useClientsStore.getState();
+    addClient(createdClient);
 
-  const handleAddNewClient = async () => {
-    try {
-      setSubmitLoading(true);
-      
-      // Valider les champs requis (même que GestionClients)
-      if (!newClientData.nom || !newClientData.prenom || !newClientData.telephone || !newClientData.email || !newClientData.adresse || !newClientData.ville || !newClientData.code_postal) {
-        alert('Veuillez remplir tous les champs requis');
-        setSubmitLoading(false);
-        return;
-      }
-      
-      // Créer le client via le store
-      const createdClient = await useClientsStore.getState().createClient(newClientData);
-      
-      // 🔥 FIX: Construire l'objet client avec TOUTES les données du formulaire
-      const clientToSelect = {
-        id: createdClient.id || createdClient.data?.id,
-        nom: newClientData.nom,
-        prenom: newClientData.prenom,
-        telephone: newClientData.telephone,
-        email: newClientData.email,
-        adresse: newClientData.adresse,
-        ville: newClientData.ville,
-        code_postal: newClientData.code_postal,
-        type_client: newClientData.type_client,
-        statut: newClientData.statut,
-        // Fusionner avec les données du serveur (au cas où)
-        ...createdClient,
-        ...createdClient.data
-      };
-      
-      console.log('Client créé et sélectionné:', clientToSelect);
-      
-      // Sélectionner automatiquement le client créé
-      setSelectedClient(clientToSelect);
-      
-      // Réinitialiser le formulaire
-      setNewClientData({ 
-        nom: '',
-        prenom: '',
-        telephone: '',
-        email: '',
-        adresse: '',
-        ville: '',
-        code_postal: '',
-        type_client: 'Particulier',
-        statut: 'Actif',
-        date_inscription: new Date().toISOString().split('T')[0]
-      });
-      setShowClientModal(false);
-      
-      alert('Client créé avec succès !');
-    } catch (error) {
-      console.error('Erreur complète lors de la création du client:', error);
+    // On s'assure que l'objet sélectionné est bien celui qui contient les infos
+    setSelectedClient(createdClient);
 
-      // Afficher les erreurs de validation du serveur
-      if (error.errors) {
-        const firstField = Object.keys(error.errors)[0];
-        const firstMessage = error.errors[firstField][0];
-        alert(`Erreur de validation : ${firstMessage}`);
-      } else {
-        alert('Erreur : ' + (error.message || 'Impossible de créer le client'));
-      }
-    } finally {
-      setSubmitLoading(false);
-    }
-  };
+    setShowClientModal(false);
+    setNewClientData({ 
+      nom: '', prenom: '', telephone: '', email: '', 
+      ville: '', adresse: '', code_postal: '', 
+      type_client: 'Particulier', statut: 'Actif', 
+      date_inscription: new Date().toISOString().split('T')[0] 
+    });
+
+  } catch (error) {
+    console.error('Erreur création client:', error);
+    const msg = error.response?.data?.message || error.message || 'Impossible de créer le client';
+    alert(`Erreur : ${msg}`);
+  }
+};
   // === RENDU ===
   return (
     <div className="min-h-screen bg-gray-50">
@@ -457,21 +377,37 @@ export default function CreationDevis() {
                   </Button>
                 </div>
               ) : (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="font-bold text-gray-900 text-lg mb-2">{selectedClient.nom}</div>
-                      <div className="space-y-1 text-sm text-gray-700">
-                        <div className="flex items-center gap-2"><Phone className="w-4 h-4" /> {selectedClient.telephone || selectedClient.tel}</div>
-                        <div className="flex items-center gap-2"><Mail className="w-4 h-4" /> {selectedClient.email}</div>
-                        <div className="flex items-center gap-2"><MapPin className="w-4 h-4" /> {selectedClient.adresse}</div>
+               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    {/* On affiche le nom ou le prénom s'il existe */}
+                    <div className="font-bold text-gray-900 text-lg mb-2">
+                      {selectedClient.nom} {selectedClient.prenom}
+                    </div>
+                    
+                    <div className="space-y-1 text-sm text-gray-700">
+                      {/* Utilisation de l'opérateur || pour tester plusieurs noms de clés possibles */}
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4" /> 
+                        {selectedClient.telephone || selectedClient.tel || selectedClient.phone || 'Non renseigné'}
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4" /> 
+                        {selectedClient.email || 'Pas d\'email'}
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4" /> 
+                        {selectedClient.adresse || selectedClient.address || selectedClient.ville || 'Adresse non renseignée'}
                       </div>
                     </div>
-                    <button onClick={() => setSelectedClient(null)} className="text-gray-400 hover:text-gray-600">
-                      <X className="w-5 h-5" />
-                    </button>
                   </div>
+                  <button onClick={() => setSelectedClient(null)} className="text-gray-400 hover:text-gray-600">
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
+              </div>
               )}
             </div>
 
@@ -569,10 +505,10 @@ export default function CreationDevis() {
                       onChange={(e) => setCurrentLigne({ ...currentLigne, hauteur: e.target.value })}
                     />
                     <Select
-                      label="Aluminium"
-                      value={currentLigne.aluminium}
-                      onChange={(val) => setCurrentLigne({ ...currentLigne, aluminium: val })}
-                      options={aluminium.map(a => ({ label: a, value: a }))}
+                      label="Alluminium"
+                      value={currentLigne.Alluminium}
+                      onChange={(val) => setCurrentLigne({ ...currentLigne, Alluminium: val })}
+                      options={Alluminium.map(a => ({ label: a, value: a }))}
                     />
                     <Select
                       label="Vitrage"
@@ -640,7 +576,7 @@ export default function CreationDevis() {
                             {ligne.produit !== 'Installation et pose' && (
                               <div>Dimensions: {ligne.largeur}m × {ligne.hauteur}m</div>
                             )}
-                            {ligne.aluminium && <div>Aluminium: {ligne.aluminium}</div>}
+                            {ligne.Alluminium && <div>Alluminium: {ligne.Alluminium}</div>}
                             {ligne.vitrage && <div>Vitrage: {ligne.vitrage}</div>}
                             <div>Quantité: {ligne.quantite} × {ligne.prixUnitaire.toLocaleString()} Fcfa</div>
                           </div>
@@ -705,7 +641,7 @@ export default function CreationDevis() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">Total HT:</span>
-                  {/* <span className="font-semibold text-gray-900">{calculerTotalHT().toLocaleString()} Fcfa</span> */}
+                  <span className="font-semibold text-gray-900">{calculerTotalHT().toLocaleString()} Fcfa</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">TVA (0%):</span>
@@ -713,7 +649,7 @@ export default function CreationDevis() {
                 </div>
                 <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
                   <span className="text-lg font-bold text-gray-900">Total TTC:</span>
-                  {/* <span className="text-2xl font-bold text-blue-600">{calculerTotalTTC().toLocaleString()} Fcfa</span> */}
+                  <span className="text-2xl font-bold text-blue-600">{calculerTotalTTC().toLocaleString()} Fcfa</span>
                 </div>
               </div>
 
@@ -739,7 +675,7 @@ export default function CreationDevis() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-blue-700">Solde:</span>
-                      <span className="font-semibold text-blue-900">{(/*calculerTotalTTC()*/ 0 - calculerAcompte()).toLocaleString()} Fcfa</span>
+                      <span className="font-semibold text-blue-900">{(calculerTotalTTC() - calculerAcompte()).toLocaleString()} Fcfa</span>
                     </div>
                   </div>
                 )}
@@ -764,6 +700,8 @@ export default function CreationDevis() {
                     </>
                   )}
                 </Button>
+              
+                
               </div>
 
               <div className="mt-6 pt-6 border-t border-gray-200">
@@ -772,6 +710,9 @@ export default function CreationDevis() {
                   rows="4"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                   placeholder="Ex: Garantie 10 ans, Installation incluse..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+
                 ></textarea>
               </div>
             </div>
@@ -790,41 +731,30 @@ export default function CreationDevis() {
       { name: 'nom', label: 'Nom', required: true },
       { name: 'prenom', label: 'Prénom', required: true },
       { name: 'telephone', label: 'Téléphone', required: true },
-      { name: 'email', label: 'Email', type: 'email', required: true },
-      { name: 'adresse', label: 'Adresse complète', required: true, fullWidth: true },
+      { name: 'email', label: 'Email', type: 'email' },
+      { name: 'adresse', label: 'Adresse', required: true, fullWidth: true },
       { name: 'ville', label: 'Ville', required: true },
-      { 
-        name: 'code_postal', 
-        label: 'Boîte Postale (ex: BP 1234)', 
-        placeholder: 'BP 0000',
-        required: true 
-      },
-      { 
-        name: 'type_client', 
-        label: 'Type de client', 
-        type: 'select', 
-        required: true,
-        options: [
-          { label: 'Particulier', value: 'Particulier' },
-          { label: 'Professionnel', value: 'Professionnel' }
-        ] 
-      },
-      { 
-        name: 'statut', 
-        label: 'Statut', 
-        type: 'select', 
-        options: [
-          { label: 'Actif', value: 'Actif' },
-          { label: 'Inactif', value: 'Inactif' },
-          { label: 'VIP', value: 'VIP' }
-        ] 
-      }
+      { name: 'code_postal', label: 'Boîte Postale', placeholder: 'BP 0000', required: true },
+      { name: 'type_client',  label: 'Type de client',type: 'select',
+          options: [
+        { label: 'Particulier', value: 'Particulier' },
+        { label: 'Professionnel', value: 'Professionnel' } ]},
+      { name: 'statut', label: 'Statut', type: 'select',
+          options: [
+        { label: 'Actif', value: 'Actif' },
+        { label: 'Inactif', value: 'Inactif' },
+        { label: 'VIP', value: 'VIP' }
+    ] }
+
     ]}
     formData={newClientData}
     onChange={handleClientFormChange}
     onCancel={() => setShowClientModal(false)}
     onSubmit={handleAddNewClient}
     submitLabel="Ajouter le client"
+
+
+    
   />
 </Modal>
     </div>

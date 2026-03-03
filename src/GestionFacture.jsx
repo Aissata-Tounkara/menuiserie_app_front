@@ -348,12 +348,7 @@ const statsCards = useMemo(() => {
 
   const handleFilterStatus = (status) => {
     setSelectedStatus(status);
-    clearError();
-    if (status === 'all') {
-      fetchFactures(1);
-    } else {
-      filterByStatut(status);
-    }
+   
   };
 
   return (

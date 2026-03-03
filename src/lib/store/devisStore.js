@@ -73,9 +73,9 @@ export const useDevisStore = create((set, get) => ({
     },
 
     /**
-     * Récupérer un devis spécifique par ID
+     * Récupérer un devis spécifique
      */
-    fetchDevisById: async (id) => {
+    fetchDevis: async (id) => {
         set({ loading: true, error: null });
         try {
             const devis = await devisService.getDevis(id);
@@ -180,37 +180,6 @@ export const useDevisStore = create((set, get) => ({
                 ),
                 currentDevis:
                     state.currentDevis?.id === id 
-                        ? { ...state.currentDevis, statut: 'Accepté' } 
-                        : state.currentDevis,
-                loading: false,
-            }));
-
-            return result;
-        } catch (error) {
-            set({
-                error: error.message || MESSAGES.ERROR.SERVER,
-                loading: false,
-            });
-            throw error;
-        }
-    },
-
-    /**
-     * Convertir un devis en commande
-     */
-    convertToOrder: async (devisId, data = {}) => {
-        set({ loading: true, error: null });
-        try {
-            // Appeler validateAndInvoice qui crée une commande
-            const result = await devisService.validateAndInvoice(devisId, data);
-            
-            // Mettre à jour le statut du devis
-            set((state) => ({
-                devis: state.devis.map((devis) =>
-                    devis.id === devisId ? { ...devis, statut: 'Accepté' } : devis
-                ),
-                currentDevis:
-                    state.currentDevis?.id === devisId 
                         ? { ...state.currentDevis, statut: 'Accepté' } 
                         : state.currentDevis,
                 loading: false,

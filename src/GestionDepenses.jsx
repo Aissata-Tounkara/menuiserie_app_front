@@ -165,7 +165,6 @@ export default function GestionDepenses() {
             </div>
             <div className="flex items-center gap-3">
               <button onClick={() => { setShowModal(true); setEditing(null); resetForm(); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2"><Plus className="w-4 h-4" />Nouvelle dépense</button>
-              <button onClick={() => alert('Export CSV')} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 flex items-center gap-2"><Download className="w-4 h-4" />Export CSV</button>
               <button onClick={() => fetchDépenses(1)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700"><Loader className="w-4 h-4" /></button>
             </div>
           </div>

@@ -34,9 +34,9 @@ export const clientsService = {
      * @returns {Promise<Object>} Client créé
      */
     async createClient(data) {
-        if (!data.email || !data.nom) {
-            throw new Error('Email et nom sont requis');
-        }
+        if (!data.nom || !data.telephone) {
+        throw new Error('Nom et téléphone sont requis');
+         }
         const response = await apiClient.post(ENDPOINTS.CUSTOMERS.CREATE, data);
         return response;
     },

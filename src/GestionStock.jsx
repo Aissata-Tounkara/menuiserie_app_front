@@ -383,12 +383,7 @@ export default function GestionStock() {
             onClick: () => fetchArticles(1),
             variant: 'secondary'
           },
-          {
-            label: 'Exporter',
-            icon: <Download className="w-4 h-4" />,
-            onClick: () => alert('Export CSV'),
-            variant: 'secondary'
-          },
+          
           {
             label: 'Nouvel article',
             icon: <Plus className="w-4 h-4" />,

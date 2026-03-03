@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Filter } from 'lucide-react';
 
+
 const FilterBar = ({ 
   filters = [], 
   onFilterChange, 
@@ -11,9 +12,12 @@ const FilterBar = ({
   const [searchTerm, setSearchTerm] = useState('');
 
   // Gestionnaire de changement de filtre
+   const [activeFilter, setActiveFilter] = useState('all');
   const handleFilterClick = (filterValue) => {
+     setActiveFilter(filterValue);   // mémorise le filtre actif
     onFilterChange(filterValue);
   };
+ 
 
   // Si on a une recherche, on filtre les options affichées
   const displayedFilters = showSearch 
@@ -43,7 +47,7 @@ const FilterBar = ({
             key={index}
             onClick={() => handleFilterClick(filter.value)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter.value === 'all'
+              filter.value === activeFilter
                 ? 'bg-blue-600 text-white hover:bg-blue-700'
                 : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
             }`}

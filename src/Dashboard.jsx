@@ -113,20 +113,19 @@ export default function Dashboard() {
   };
 
   // Données des stats basées sur l'API
-  const totalRevenus = dashboardStats?.stats?.revenus || 0;
+  const totalChiffreDaffaires = dashboardStats?.stats?.revenus || 0;
 const totalClients = dashboardStats?.stats?.clients_actifs || 0;
 const totalProducts = dashboardStats?.stats?.produits || 0;
 const totalOrders = dashboardStats?.stats?.commandes || 0;
 // Alertes
 const stockAlerts = dashboardStats?.alertes?.stock_faible || 0;
-const pendingQuotes = dashboardStats?.alertes?.devis_en_attente || 0;
 const readyDeliveries = dashboardStats?.alertes?.livraisons_du_jour || 0;
 
   const statsData = [
     { icon: ShoppingCart, value: totalOrders, label: 'Commandes du mois', iconColor: 'bg-blue-500' },
-    { icon: DollarSign, value: `${totalRevenus.toLocaleString('fr-FR')} Fcfa`, label: 'Revenus', iconColor: 'bg-green-500' },
+    { icon: DollarSign, value: `${totalChiffreDaffaires.toLocaleString('fr-FR')} Fcfa`, label: 'Chiffre d\'affaires', iconColor: 'bg-green-500' },
     { icon: Users, value: totalClients, label: 'Clients actifs', iconColor: 'bg-purple-500' },
-    { icon: Package, value: totalProducts, label: 'Produits', iconColor: 'bg-orange-500' }
+    { icon: Package, value: totalProducts, label: 'Produits en stock', iconColor: 'bg-orange-500' }
   ];
 
   return (
@@ -212,15 +211,7 @@ const readyDeliveries = dashboardStats?.alertes?.livraisons_du_jour || 0;
                       </p>
                     </div>
                   </div>
-                  <div className={`border rounded-lg p-4 flex items-start gap-3 ${pendingQuotes > 0 ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
-                    <Clock className={`w-5 h-5 mt-0.5 ${pendingQuotes > 0 ? 'text-blue-600' : 'text-gray-600'}`} />
-                    <div>
-                      <h3 className={`font-semibold text-sm ${pendingQuotes > 0 ? 'text-blue-900' : 'text-gray-900'}`}>Devis en attente</h3>
-                      <p className={`text-xs mt-1 ${pendingQuotes > 0 ? 'text-blue-700' : 'text-gray-600'}`}>
-                        {pendingQuotes} devis attendent une validation
-                      </p>
-                    </div>
-                  </div>
+                 
                   <div className={`border rounded-lg p-4 flex items-start gap-3 ${readyDeliveries > 0 ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
                     <CheckCircle className={`w-5 h-5 mt-0.5 ${readyDeliveries > 0 ? 'text-green-600' : 'text-gray-600'}`} />
                     <div>

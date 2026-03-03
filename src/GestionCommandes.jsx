@@ -83,14 +83,29 @@ export default function GestionCommandes() {
       return matchStatus && matchSearch;
     });
   }, [searchTerm, selectedStatus, commandes]);
+  // Ajoute cet état pour garder toujours les données complètes
+const [allCommandes, setAllCommandes] = useState([]);
+
+useEffect(() => {
+  fetchCommandes(1);
+  fetchStats();
+}, [fetchCommandes, fetchStats]);
+
+// Quand les commandes chargent pour la 1ère fois, sauvegarde-les
+useEffect(() => {
+  if (commandes.length > 0 && allCommandes.length === 0) {
+    setAllCommandes(commandes);
+  }
+}, [commandes]);
 
   // Stats
-  const statsCards = [
-    { label: 'Total commandes', value: commandes.length || 0, color: 'bg-blue-500', icon: Package },
-    { label: 'En production', value: commandes.filter(c => c.statut === 'En production').length || 0, color: 'bg-purple-500', icon: Package },
-    { label: 'Prêtes', value: commandes.filter(c => c.statut === 'Prête').length || 0, color: 'bg-orange-500', icon: AlertCircle },
-    { label: 'Livrées', value: stats?.deliveredCount || 0, color: 'bg-green-500', icon: Truck }
-  ];
+ // ✅ Réactif au filtre actif
+const statsCards = [
+  { label: 'Total commandes',  value: allCommandes.length, color: 'bg-blue-500', icon: Package },
+  { label: 'En production',    value: allCommandes.filter(c => c.statut === 'En production').length, color: 'bg-purple-500', icon: Package },
+  { label: 'Prêtes',           value: allCommandes.filter(c => c.statut === 'Prête').length, color: 'bg-orange-500', icon: AlertCircle },
+  { label: 'Livrées',          value: stats?.deliveredCount || allCommandes.filter(c => c.statut === 'Livrée').length, color: 'bg-green-500', icon: Truck }
+];
 
   // Filtres dynamiques - avec compteurs dynamiques
   const statusOptions = useMemo(() => [
@@ -233,12 +248,7 @@ export default function GestionCommandes() {
 
   const handleFilterStatus = async (status) => {
     setSelectedStatus(status);
-    clearError();
-    if (status === 'all') {
-      fetchCommandes(1);
-    } else {
-      await filterByStatut(status);
-    }
+   
   };
 
   return (
