@@ -1,0 +1,59 @@
+{
+  "name": "Menuiserie-app",
+  "short_name": "Menuis-app",
+  "description": "Application de menuiserie sur mesure",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "lang": "fr",
+  "dir": "ltr",
+  "orientation": "portrait-primary",
+  "display": "standalone",
+  "background_color": "#1a0f00",
+  "theme_color": "#8B4513",
+  "categories": ["business"],
+  "icons": [
+    {
+      "src": "/favicon/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+     {
+      "src": "/favicon/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable "
+    },
+    {
+      "src": "/favicon/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+   
+  "screenshots": [
+  {
+    "src": "/favicon/screenshot-mobile.png",
+    "sizes": "390x844",
+    "type": "image/png",
+    "form_factor": "narrow"
+  },
+  {
+    "src": "/favicon/screenshot-desktop.png",
+    "sizes": "1280x720",
+    "type": "image/png",
+    "form_factor": "wide"
+  }
+],
+"prefer_related_applications": false
+}
+
+
+

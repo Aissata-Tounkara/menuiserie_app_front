@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Link } from "react-router-dom";
 
+
 // Stores
 import { useStocksStore } from './lib/store/stocksStore';
 
@@ -34,6 +35,7 @@ export default function GestionStock() {
     deleteArticle,
     searchArticles,
     setArticlesFilters,
+    createMovement
   } = useStocksStore();
 
   // Local state
@@ -129,7 +131,7 @@ export default function GestionStock() {
   const actions = [
     {
       icon: <RefreshCw className="w-4 h-4" />,
-      onClick: () => alert('Ajuster stock - À implémenter'),
+      onClick: (row) => handleSortieStock(row),
       className: 'bg-blue-50 text-blue-600 hover:bg-blue-100'
     },
     {
@@ -355,6 +357,35 @@ export default function GestionStock() {
       }
     }
   };
+  const handleSortieStock = async (article) => {
+
+  const quantite = prompt("Quantité à sortir du stock :");
+
+  if (!quantite || quantite <= 0) {
+    alert("Quantité invalide");
+    return;
+  }
+
+  try {
+
+    await createMovement({
+      article_id: article.id,
+      type: "sortie",
+      quantite: parseInt(quantite),
+      motif: "Sortie manuelle",
+      commentaire: "Sortie depuis gestion du stock"
+    });
+
+    alert("Sortie de stock enregistrée");
+
+    fetchArticles(1);
+    fetchArticlesStats();
+    fetchStockAlerts();
+
+  } catch (error) {
+    alert("Erreur lors de la sortie de stock");
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-50">
