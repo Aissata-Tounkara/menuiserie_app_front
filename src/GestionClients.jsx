@@ -300,11 +300,11 @@ const formFields = [
         title="Gestion des Clients"
         subtitle={`${clients.length} clients dans votre base`}
         navigationLinks={[
-          { label: 'Dashboard', href: '/dashboard' },
+          // { label: 'Dashboard', href: '/dashboard' },
           { label: 'Gestion des Commandes', href: '/gestion-commandes' },
           { label: 'Gestion des devis', href: '/gestion-devis' },
-          { label: 'Gestion des stocks', href: '/gestion-de-stock' },
-          { label: 'Gestion des dépenses', href: '/gestion-depenses' },
+          // { label: 'Gestion des stocks', href: '/gestion-de-stock' },
+          // { label: 'Gestion des dépenses', href: '/gestion-depenses' },
           { label: 'Gestion des factures', href: '/gestion-de-facture' }
         ]}
         actions={[

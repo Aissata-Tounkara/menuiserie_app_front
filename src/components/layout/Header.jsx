@@ -1,42 +1,48 @@
-import React, { useState } from 'react';
-// Assurez-vous d'importer votre Select ici
-import Select from '../ui/Select'; 
-import { X, Save, Plus, Filter, Download, ChevronDown } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import Select from '../ui/Select';
+import { useAuthStore } from '../../lib/store/authStore';
 
-const Header = ({ 
-  title, 
-  subtitle, 
+const Header = ({
+  title,
+  subtitle,
   navigationLinks = [],
   actions = [],
-  // Nouvelle prop générique pour le select
-  selectAction = null, 
+  selectAction = null,
   userAvatar,
-  userName
+  userName,
 }) => {
   const [showLinks, setShowLinks] = useState(false);
+  const { user } = useAuthStore();
+
+  const resolvedNavigationLinks = useMemo(() => {
+    const hasActivityLink = navigationLinks.some((link) => link.href === '/activites');
+
+    if (user?.role === 'admin' && !hasActivityLink) {
+      return [...navigationLinks, { label: 'Activités', href: '/activites' }];
+    }
+
+    return navigationLinks;
+  }, [navigationLinks, user]);
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="px-5 py-4">
-        
-        {/* Menu mobile toggle */}
-        {navigationLinks.length > 0 && (
-          <button 
+        {resolvedNavigationLinks.length > 0 && (
+          <button
             className="sm:hidden mb-2 px-4 py-2 bg-blue-600 text-white rounded-lg"
             onClick={() => setShowLinks(!showLinks)}
-          > 
-            {showLinks ? "Fermer le menu" : "Afficher le menu"}
+          >
+            {showLinks ? 'Fermer le menu' : 'Afficher le menu'}
           </button>
         )}
 
-        {/* Navigation Links */}
-        {navigationLinks.length > 0 && (
+        {resolvedNavigationLinks.length > 0 && (
           <div
             className={`${
-              showLinks ? "grid grid-cols-2 gap-2" : "hidden"
+              showLinks ? 'grid grid-cols-2 gap-2' : 'hidden'
             } sm:flex sm:items-center sm:flex-wrap sm:gap-2 mb-4`}
           >
-            {navigationLinks.map((link, index) => (
+            {resolvedNavigationLinks.map((link, index) => (
               <a
                 key={index}
                 href={link.href}
@@ -48,34 +54,27 @@ const Header = ({
           </div>
         )}
 
-        {/* Header content */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
             {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
           </div>
 
-          {/* Right side actions */}
           <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-            
-            {/* INTEGRATION DU CUSTOM SELECT */}
             {selectAction && (
-              <div className="w-full sm:w-48"> 
-                {/* On enveloppe dans une div pour contrôler la largeur */}
+              <div className="w-full sm:w-48">
                 <Select
                   value={selectAction.value}
                   onChange={selectAction.onChange}
                   options={selectAction.options}
                   placeholder={selectAction.placeholder}
                   disabled={selectAction.disabled}
-                  // On peut passer null au label pour ne pas l'afficher dans le header
-                  label={null} 
-                  className="mb-0" // Reset margin s'il y en a par défaut
+                  label={null}
+                  className="mb-0"
                 />
               </div>
             )}
 
-            {/* User Avatar */}
             {userAvatar && userName && (
               <div className="flex items-center gap-3 pl-2 border-l border-gray-200">
                 <span className="text-gray-700 font-medium hidden sm:inline">{userName}</span>
@@ -85,7 +84,6 @@ const Header = ({
               </div>
             )}
 
-            {/* Action Buttons */}
             {actions.map((action, index) => (
               <button
                 key={index}

@@ -1,4 +1,7 @@
 export const ENDPOINTS = {
+  ADMIN: {
+    ACTIVITIES: '/admin/activities',
+  },
   // ======================
   // AUTH (publique + admin)
   // ======================

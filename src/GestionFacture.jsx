@@ -357,12 +357,12 @@ const statsCards = useMemo(() => {
         title="Gestion des Factures"
         subtitle={`${filteredFactures.length} factures`}
         navigationLinks={[
-          { label: 'Dashboard', href: '/dashboard' },
+          // { label: 'Dashboard', href: '/dashboard' },
           { label: 'Gestion clients', href: '/gestion-clients' },
           { label: 'Gestion des Commandes', href: '/gestion-commandes' },
-          { label: 'Gestion des stocks', href: '/gestion-de-stock' },
+          // { label: 'Gestion des stocks', href: '/gestion-de-stock' },
           { label: 'Gestion des devis', href: '/gestion-devis' },
-          { label: 'Gestion des dépenses', href: '/gestion-depenses' }
+          // { label: 'Gestion des dépenses', href: '/gestion-depenses' }
         ]}
       />
 

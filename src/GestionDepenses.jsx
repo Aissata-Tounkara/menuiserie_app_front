@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, Trash2, Edit2, Download, FileText, Calendar, DollarSign, X, Loader } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuthStore } from './lib/store/authStore';
 
 // Store
 import { useDepensesStore } from './lib/store/depensesStore';
@@ -130,6 +131,8 @@ export default function GestionDepenses() {
     return depenses.filter(d => (d.date || '').slice(0,7) === filterMonth).reduce((s, d) => s + (d.montant || 0), 0);
   }, [depenses, filterMonth]);
 
+  const { user } = useAuthStore();
+
   const months = useMemo(() => {
     const set = new Set(depenses.map(d => (d.date || '').slice(0,7)).filter(Boolean));
     return ['all', ...Array.from(set).sort((a,b)=>b.localeCompare(a))];
@@ -156,6 +159,9 @@ export default function GestionDepenses() {
             <Link to="/gestion-de-stock" className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200">Gestion des stocks</Link>
             <Link to="/gestion-devis" className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200">Gestion des devis</Link>
             <Link to="/gestion-de-facture" className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200">Gestion des factures</Link>
+            {user?.role === 'admin' && (
+              <Link to="/activites" className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200">Activités</Link>
+            )}
           </div>
 
           <div className="px-6 py-4 flex items-center justify-between">

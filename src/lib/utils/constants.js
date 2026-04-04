@@ -29,6 +29,7 @@ export const ROUTES = {
     STOCK: '/gestion-de-stock',
     FACTURES: '/gestion-de-facture',
     DEPENSES: '/gestion-depenses',
+    ACTIVITIES: '/activites',
 };
 
 // Messages

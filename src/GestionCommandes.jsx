@@ -258,12 +258,12 @@ const statsCards = [
         title="Gestion des Commandes"
         subtitle={`${filteredCommandes.length} commandes`}
         navigationLinks={[
-          { label: 'Dashboard', href: '/dashboard' },
+          // { label: 'Dashboard', href: '/dashboard' },
           { label: 'Gestion clients', href: '/gestion-clients' },
           { label: 'Gestion des devis', href: '/gestion-devis' },
-          { label: 'Gestion des stocks', href: '/gestion-de-stock' },
+          // { label: 'Gestion des stocks', href: '/gestion-de-stock' },
           { label: 'Gestion des factures', href: '/gestion-de-facture' },
-          { label: 'Gestion des dépenses', href: '/gestion-depenses' }
+          // { label: 'Gestion des dépenses', href: '/gestion-depenses' }
         ]}
      
       />
