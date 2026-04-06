@@ -46,10 +46,7 @@ const GestionClients = () => {
     nom: '', 
     prenom: '', 
     telephone: '', 
-    email: '',
-    adresse: '', 
     ville: '', 
-    code_postal: '', // Ajouté
     type_client: 'Particulier', // Valeur par défaut de la migration
     statut: 'Actif', // Valeur par défaut de la migration
     date_inscription: new Date().toISOString().split('T')[0] // Requis par la migration (non nullable)
@@ -103,10 +100,7 @@ const GestionClients = () => {
             <Phone className="w-4 h-4" />
             <span>{row.telephone}</span>
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Mail className="w-4 h-4" />
-            <span>{row.email}</span>
-          </div>
+          
         </div>
       )
     },
@@ -116,7 +110,7 @@ const GestionClients = () => {
       render: (_, row) => (
         <div className="flex items-start gap-2 text-sm text-gray-600">
           <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <span>{row.adresse}, {row.ville}</span>
+          <span> {row.ville}</span>
         </div>
       )
     },
@@ -150,7 +144,7 @@ const GestionClients = () => {
   render: (_, row) => {
     // Force la conversion en nombre pour éviter les erreurs d'affichage
     const total = parseFloat(row.total_achats || 0);
-    const nbCommandes = parseInt(row.nombre_commandes || 0); // Notez le nombre_commandes (snake_case)
+    const nbCommandes = row.nombre_commandes ?? row.nombreCommandes ?? 0;
 
     return (
       <div>
@@ -176,15 +170,7 @@ const formFields = [
   { name: 'nom', label: 'Nom', required: true },
   { name: 'prenom', label: 'Prénom', required: true },
   { name: 'telephone', label: 'Téléphone', required: true },
-  { name: 'email', label: 'Email', type: 'email', required: true },
-  { name: 'adresse', label: 'Adresse complète', required: true },
   { name: 'ville', label: 'Ville', required: true },
-  { 
-    name: 'code_postal', 
-    label: 'Boîte Postale (ex: BP 1234)', 
-    placeholder: 'BP 0000',
-    required: true 
-  },
   { 
     name: 'type_client', 
     label: 'Type de client', 
@@ -213,7 +199,7 @@ const formFields = [
       return clients;
     }
     return clients.filter(c => 
-      `${c.nom || ''} ${c.prenom || ''} ${c.email || ''} ${c.ville || ''}`.toLowerCase()
+      `${c.nom || ''} ${c.prenom || ''}  ${c.ville || ''}`.toLowerCase()
         .includes(searchTerm.toLowerCase())
     );
   }, [searchTerm, clients]);
@@ -226,11 +212,8 @@ const formFields = [
       setFormData({ 
         nom: client.nom || '', 
         prenom: client.prenom || '', 
-        telephone: client.telephone || '', 
-        email: client.email || '', 
-        adresse: client.adresse || '', 
+        telephone: client.telephone || '',  
         ville: client.ville || '', 
-        code_postal: client.codePostal || '', // Ajouté
         type_client: client.typeClient || 'Particulier', // Ajouté
         statut: client.statut || 'Actif',
         date_inscription: client.date_inscription || new Date().toISOString().split('T')[0]
@@ -364,7 +347,7 @@ const formFields = [
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input 
               type="text"
-              placeholder="Rechercher par nom, email ou ville..."
+              placeholder="Rechercher par nom ou ville..."
               className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               value={searchTerm}
               onChange={handleSearch}
@@ -416,12 +399,12 @@ const formFields = [
               <div className="space-y-1">
                 <p className="text-xs text-gray-400 font-semibold uppercase">Coordonnées</p>
                 <div className="flex items-center gap-2 text-gray-700"><Phone className="w-4 h-4" /> {selectedClient?.telephone}</div>
-                <div className="flex items-center gap-2 text-gray-700"><Mail className="w-4 h-4" /> {selectedClient?.email}</div>
+          
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-gray-400 font-semibold uppercase">Adresse</p>
+                <p className="text-xs text-gray-400 font-semibold uppercase">Localisation</p>
                 <div className="flex items-start gap-2 text-gray-700"><MapPin className="w-4 h-4 mt-1" /> 
-                  <span>{selectedClient?.adresse}, {selectedClient?.ville}</span>
+                  <span>{selectedClient?.ville}</span>
                 </div>
               </div>
             </div>

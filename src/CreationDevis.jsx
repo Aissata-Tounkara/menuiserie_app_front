@@ -85,10 +85,7 @@ export default function CreationDevis() {
     nom: '',
     prenom: '',
     telephone: '',
-    email: '',
-    adresse: '',
     ville: '',
-    code_postal: '',
     type_client: 'Particulier',
     statut: 'Actif',
     date_inscription: new Date().toISOString().split('T')[0]
@@ -270,8 +267,8 @@ const handleAddNewClient = async () => {
 
     setShowClientModal(false);
     setNewClientData({ 
-      nom: '', prenom: '', telephone: '', email: '', 
-      ville: '', adresse: '', code_postal: '', 
+      nom: '', prenom: '', telephone: '', 
+      ville: '', 
       type_client: 'Particulier', statut: 'Actif', 
       date_inscription: new Date().toISOString().split('T')[0] 
     });
@@ -392,14 +389,11 @@ const handleAddNewClient = async () => {
                         {selectedClient.telephone || selectedClient.tel || selectedClient.phone || 'Non renseigné'}
                       </div>
                       
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4" /> 
-                        {selectedClient.email || 'Pas d\'email'}
-                      </div>
+                      
                       
                       <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4" /> 
-                        {selectedClient.adresse || selectedClient.address || selectedClient.ville || 'Adresse non renseignée'}
+                        { selectedClient.ville || 'Adresse non renseignée'}
                       </div>
                     </div>
                   </div>
@@ -731,10 +725,7 @@ const handleAddNewClient = async () => {
       { name: 'nom', label: 'Nom', required: true },
       { name: 'prenom', label: 'Prénom', required: true },
       { name: 'telephone', label: 'Téléphone', required: true },
-      { name: 'email', label: 'Email', type: 'email' },
-      { name: 'adresse', label: 'Adresse', required: true, fullWidth: true },
       { name: 'ville', label: 'Ville', required: true },
-      { name: 'code_postal', label: 'Boîte Postale', placeholder: 'BP 0000', required: true },
       { name: 'type_client',  label: 'Type de client',type: 'select',
           options: [
         { label: 'Particulier', value: 'Particulier' },

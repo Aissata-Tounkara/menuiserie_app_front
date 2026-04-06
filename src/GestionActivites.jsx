@@ -32,7 +32,7 @@ export default function GestionActivites() {
     {
       header: 'Date',
       key: 'logged_at',
-      render: (value) => (value ? new Date(value).toLocaleString('fr-FR') : '-'),
+      render: (value) => (value ? new Date(value).toLocaleString('fr-FR',  { timeZone: 'Africa/Bamako' }) : '-'),
     },
     {
       header: 'Utilisateur',
@@ -77,7 +77,7 @@ export default function GestionActivites() {
         title="Journal des activités"
         subtitle={loading ? 'Chargement...' : `${activities.length} activité(s) enregistrée(s)`}
         navigationLinks={[
-          { label: 'Dashboard', href: '/dashboard' },
+          // { label: 'Dashboard', href: '/dashboard' },
           { label: 'Gestion clients', href: '/gestion-clients' },
           { label: 'Gestion des Commandes', href: '/gestion-commandes' },
           { label: 'Gestion des devis', href: '/gestion-devis' },

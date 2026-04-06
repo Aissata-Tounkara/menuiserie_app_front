@@ -40,13 +40,13 @@ const Header = ({
           <div
             className={`${
               showLinks ? 'grid grid-cols-2 gap-2' : 'hidden'
-            } sm:flex sm:items-center sm:flex-wrap sm:gap-2 mb-4`}
+            } sm:flex sm:items-center sm:flex-justify-between sm:gap-2 mb-4`}
           >
             {resolvedNavigationLinks.map((link, index) => (
               <a
                 key={index}
                 href={link.href}
-                className="text-left py-2 px-2 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200"
+                className="text-left py-2 px-14 text-sm font-semibold text-blue-500 hover:text-blue-700 transition-colors duration-200 "
               >
                 {link.label}
               </a>
