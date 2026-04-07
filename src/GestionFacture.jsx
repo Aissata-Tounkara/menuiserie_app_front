@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   Eye, Download, Send, DollarSign, AlertCircle, CheckCircle,
-  Clock, FileText, Plus, Trash2, Calendar, User, CreditCard, Mail, Phone
+  Clock, FileText, Plus, Trash2, Calendar, User, CreditCard, Mail, Phone, PlusCircle
 } from 'lucide-react';
-import { Link } from "react-router-dom";
+import { Link } from "react-router-dom"; 
+import AddPaymentModal from './components/invoice/AddPaymentModal';
+
 
 // Composants réutilisables
 import Header from './components/layout/Header';
@@ -47,6 +49,7 @@ export default function GestionFactures() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [factureToConfirm, setFactureToConfirm] = useState(null);
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // --- EFFET: Charger les données au montage ---
   useEffect(() => {
@@ -248,6 +251,16 @@ const statsCards = useMemo(() => {
       onClick: (row) => openModal(row),
       className: 'bg-gray-100 text-gray-600 hover:bg-gray-200'
     },
+
+    {
+      icon: <PlusCircle className="w-4 h-4" />,
+      onClick: (row) => handleAddPayment(row),
+      className: 'bg-green-50 text-green-600 hover:bg-green-100',
+      title: 'Ajouter un paiement',
+      // ✅ CORRECTION : `show` est une fonction qui reçoit `row`
+    show: (row) => row.statutCalcule !== 'Payée'
+    },
+
     {
       icon: <Download className="w-4 h-4" />,
       onClick: (row) => handleExportPDF(row),
@@ -283,6 +296,25 @@ const statsCards = useMemo(() => {
     setFactureToConfirm(null);
   };
 
+  const handleAddPayment = (facture) => {
+    setSelectedFacture(facture);
+    setShowPaymentModal(true);
+  };
+  const handlePaymentAdded = (data) => {
+    if (selectedFacture?.id === data.facture.id) {
+      setSelectedFacture(prev => ({
+        ...prev,
+        total_paye: data.facture.total_paye,
+        reste_a_payer: data.facture.reste_a_payer,
+        statut_calcule: data.facture.statut_calcule,
+        paiements: [...(prev.paiements || []), data.paiement]
+      }));
+    }
+
+    // Recharger la liste des factures
+    fetchFactures(1);
+    alert('✅ Paiement enregistré avec succès !');
+  };
   const confirmMarkAsPaid = async () => {
     if (!factureToConfirm) return;
     
@@ -432,11 +464,61 @@ const statsCards = useMemo(() => {
         {selectedFacture && (
           <>
             <InvoicePrintView facture={selectedFacture} />
-            <div className="mt-6 pt-4 border-t border-gray-200 text-center">
+                        {/* 📋 Section historique des paiements */}
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-gray-900">Historique des paiements</h4>
+                {selectedFacture.statut_calcule !== 'Payée' && (
+                  <button
+                    onClick={() => handleAddPayment(selectedFacture)}
+                    className="text-sm flex items-center gap-1 text-green-600 hover:text-green-700 font-medium"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    Ajouter un paiement
+                  </button>
+                )}
+              </div>
+
+            {selectedFacture.paiements?.length > 0 ? (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {selectedFacture.paiements.map(paiement => (
+                  <div key={paiement.id} className="flex justify-between items-center text-sm p-2 bg-gray-50 rounded">
+                    <div>
+                      <span className="font-medium">{paiement.date_paiement}</span>
+                      <span className="text-gray-500 ml-2">• {paiement.mode_paiement}</span>
+                      {paiement.reference && <span className="text-gray-400 ml-2">({paiement.reference})</span>}
+                    </div>
+                    <span className="font-semibold text-green-600">
+                      {paiement.montant?.toLocaleString()} FCFA
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 italic">Aucun paiement enregistré</p>
+            )}
+
+          {/* Résumé financier */}
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <div className="flex justify-between text-sm">
+              <span>Total facture :</span>
+              <span className="font-semibold">{selectedFacture.montant_ttc?.toLocaleString()} FCFA</span>
             </div>
-          </>
-        )}
-      </Modal>
+            <div className="flex justify-between text-sm text-green-700">
+              <span>Total payé :</span>
+              <span className="font-semibold">{selectedFacture.total_paye?.toLocaleString()} FCFA</span>
+            </div>
+            <div className="flex justify-between text-sm font-bold mt-2 pt-2 border-t border-blue-200">
+              <span>Reste à payer :</span>
+              <span className={selectedFacture.reste_a_payer > 0 ? 'text-orange-600' : 'text-green-600'}>
+                {selectedFacture.reste_a_payer?.toLocaleString()} FCFA
+              </span>
+            </div>
+          </div>
+        </div>
+                  </>
+                )}
+              </Modal>
 
       {/* MODAL CONFIRMATION */}
       <Modal
@@ -484,6 +566,16 @@ const statsCards = useMemo(() => {
           </div>
         )}
       </Modal>
+
+      <AddPaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setSelectedFacture(null);
+        }}
+        facture={selectedFacture}
+        onPaymentAdded={handlePaymentAdded}
+      />
     </div>
   );
 }

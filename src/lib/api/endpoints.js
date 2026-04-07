@@ -58,6 +58,15 @@ export const ENDPOINTS = {
     DELETE: (id) => `/factures/${id}`,        // DELETE
     MARK_AS_PAID: (id) => `/factures/${id}/payer`, // POST
     STATS: '/factures/stats',                 // GET
+
+        // === 🆕 NOUVEAU : Sous-section Paiements ===
+    PAIEMENTS: {
+      LIST: (factureId) => `/factures/${factureId}/paiements`,           // GET
+      CREATE: (factureId) => `/factures/${factureId}/paiements`,         // POST
+      DETAIL: (factureId, paiementId) => `/factures/${factureId}/paiements/${paiementId}`, // GET
+      UPDATE: (factureId, paiementId) => `/factures/${factureId}/paiements/${paiementId}`, // PUT
+      DELETE: (factureId, paiementId) => `/factures/${factureId}/paiements/${paiementId}`, // DELETE
+    },
   },
 
   // ======================

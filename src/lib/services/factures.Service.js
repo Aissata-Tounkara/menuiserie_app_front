@@ -122,4 +122,109 @@ export const facturesService = {
         if (!id) throw new Error('L\'ID de la facture est requis');
         return await apiClient.download(`${ENDPOINTS.INVOICES.DETAIL(id)}/telecharger-pdf`);
     },
+
+        /**
+     * Exporter une facture en PDF
+     * @param {number} id - ID de la facture
+     * @returns {Promise<Blob>} Fichier PDF
+     */
+    async exportPDF(id) {
+        if (!id) throw new Error('L\'ID de la facture est requis');
+        return await apiClient.download(`${ENDPOINTS.INVOICES.DETAIL(id)}/telecharger-pdf`);
+    },
+
+    // ============ 🆕 MÉTHODES PAIEMENTS ============
+
+    /**
+     * Ajouter un paiement à une facture
+     * POST /api/factures/{id}/paiements
+     * @param {number} factureId - ID de la facture
+     * @param {Object} paymentData - { montant, date_paiement, mode_paiement, reference?, notes? }
+     * @returns {Promise<Object>} Réponse avec paiement et facture mise à jour
+     */
+    async addPayment(factureId, paymentData) {
+        if (!factureId) throw new Error('L\'ID de la facture est requis');
+        if (!paymentData?.montant || paymentData.montant <= 0) {
+            throw new Error('Le montant du paiement est requis et doit être > 0');
+        }
+        if (!paymentData?.date_paiement) {
+            throw new Error('La date de paiement est requise');
+        }
+        if (!paymentData?.mode_paiement) {
+            throw new Error('Le mode de paiement est requis');
+        }
+        
+        return await apiClient.post(
+            ENDPOINTS.INVOICES.PAIEMENTS.CREATE(factureId), 
+            paymentData
+        );
+    },
+
+    /**
+     * Récupérer la liste des paiements d'une facture
+     * GET /api/factures/{id}/paiements
+     * @param {number} factureId - ID de la facture
+     * @param {Object} options - Pagination et filtres
+     * @returns {Promise<Object>} Liste paginée des paiements
+     */
+    async getPaiements(factureId, options = {}) {
+        if (!factureId) throw new Error('L\'ID de la facture est requis');
+        
+        const queryParams = new URLSearchParams(options).toString();
+        const endpoint = queryParams 
+            ? `${ENDPOINTS.INVOICES.PAIEMENTS.LIST(factureId)}?${queryParams}`
+            : ENDPOINTS.INVOICES.PAIEMENTS.LIST(factureId);
+            
+        return await apiClient.get(endpoint);
+    },
+
+    /**
+     * Récupérer un paiement spécifique
+     * GET /api/factures/{factureId}/paiements/{paiementId}
+     * @param {number} factureId - ID de la facture
+     * @param {number} paiementId - ID du paiement
+     * @returns {Promise<Object>} Détails du paiement
+     */
+    async getPaiement(factureId, paiementId) {
+        if (!factureId) throw new Error('L\'ID de la facture est requis');
+        if (!paiementId) throw new Error('L\'ID du paiement est requis');
+        
+        return await apiClient.get(
+            ENDPOINTS.INVOICES.PAIEMENTS.DETAIL(factureId, paiementId)
+        );
+    },
+
+    /**
+     * Mettre à jour un paiement existant
+     * PUT /api/factures/{factureId}/paiements/{paiementId}
+     * @param {number} factureId - ID de la facture
+     * @param {number} paiementId - ID du paiement
+     * @param {Object} paymentData - Données à mettre à jour
+     * @returns {Promise<Object>} Paiement mis à jour
+     */
+    async updatePayment(factureId, paiementId, paymentData) {
+        if (!factureId) throw new Error('L\'ID de la facture est requis');
+        if (!paiementId) throw new Error('L\'ID du paiement est requis');
+        
+        return await apiClient.put(
+            ENDPOINTS.INVOICES.PAIEMENTS.UPDATE(factureId, paiementId),
+            paymentData
+        );
+    },
+
+    /**
+     * Supprimer un paiement
+     * DELETE /api/factures/{factureId}/paiements/{paiementId}
+     * @param {number} factureId - ID de la facture
+     * @param {number} paiementId - ID du paiement
+     * @returns {Promise<Object>} Réponse du serveur
+     */
+    async deletePayment(factureId, paiementId) {
+        if (!factureId) throw new Error('L\'ID de la facture est requis');
+        if (!paiementId) throw new Error('L\'ID du paiement est requis');
+        
+        return await apiClient.delete(
+            ENDPOINTS.INVOICES.PAIEMENTS.DELETE(factureId, paiementId)
+        );
+    },
 };

@@ -11,6 +11,7 @@ export const useFacturesStore = create((set, get) => ({
     // ============ État ============
     factures: [],
     currentFacture: null,
+    paiements: [],  // ← AJOUTER CETTE LIGNE
     loading: false,
     error: null,
     pagination: {
@@ -195,6 +196,100 @@ export const useFacturesStore = create((set, get) => ({
         }
     },
 
+    // ============ 🆕 ACTIONS PAIEMENTS ============
+
+    /**
+     * Ajouter un paiement à une facture
+     */
+    addPayment: async (factureId, paymentData) => {
+        set({ loading: true, error: null });
+        try {
+            const response = await facturesService.addPayment(factureId, paymentData);
+            
+            // Recharger la facture pour avoir les totaux mis à jour
+            await get().fetchFactureById(factureId);
+            
+            return response.data;
+        } catch (error) {
+            set({
+                error: error.message || MESSAGES.ERROR.SERVER,
+                loading: false,
+            });
+            throw error;
+        } finally {
+            set({ loading: false });
+        }
+    },
+
+    /**
+     * Récupérer les paiements d'une facture
+     */
+    fetchPaiements: async (factureId, page = 1) => {
+        set({ loading: true, error: null });
+        try {
+            const response = await facturesService.getPaiements(factureId, { page, per_page: 15 });
+            return response;
+        } catch (error) {
+            set({
+                error: error.message || MESSAGES.ERROR.SERVER,
+                loading: false,
+            });
+            throw error;
+        } finally {
+            set({ loading: false });
+        }
+    },
+
+    /**
+     * Mettre à jour un paiement
+     */
+    updatePayment: async (factureId, paiementId, paymentData) => {
+        set({ loading: true, error: null });
+        try {
+            const response = await facturesService.updatePayment(factureId, paiementId, paymentData);
+            await get().fetchFactureById(factureId);
+            return response.data;
+        } catch (error) {
+            set({
+                error: error.message || MESSAGES.ERROR.SERVER,
+                loading: false,
+            });
+            throw error;
+        } finally {
+            set({ loading: false });
+        }
+    },
+
+    /**
+     * Supprimer un paiement
+     */
+    deletePayment: async (factureId, paiementId) => {
+        set({ loading: true, error: null });
+        try {
+            await facturesService.deletePayment(factureId, paiementId);
+            await get().fetchFactureById(factureId);
+            
+            // Mettre à jour la liste locale si la facture est chargée
+            set((state) => ({
+                currentFacture: state.currentFacture?.id === factureId
+                    ? {
+                        ...state.currentFacture,
+                        paiements: state.currentFacture.paiements?.filter(p => p.id !== paiementId)
+                    }
+                    : state.currentFacture
+            }));
+        } catch (error) {
+            set({
+                error: error.message || MESSAGES.ERROR.SERVER,
+                loading: false,
+            });
+            throw error;
+        } finally {
+            set({ loading: false });
+        }
+    },
+
+
     /**
      * Rechercher les factures
      */
@@ -336,6 +431,7 @@ export const useFacturesStore = create((set, get) => ({
         set({
             factures: [],
             currentFacture: null,
+            paiements: [],  // ← AJOUTER CETTE LIGNE
             loading: false,
             error: null,
             pagination: {
