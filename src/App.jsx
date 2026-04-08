@@ -12,10 +12,12 @@ import GestionDepenses from './GestionDepenses';
 import GestionActivites from './GestionActivites';
 import ForgotPassword from './ForgotPassword';
 import AdminRoute from './components/auth/AdminRoute';
+import AppInstallPrompt from './components/pwa/AppInstallPrompt';
 import { useAuthStore } from './lib/store/authStore';
 
 function App() {
   const initialize = useAuthStore((state) => state.initialize);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   useEffect(() => {
     initialize();
@@ -24,6 +26,7 @@ function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-right" />
+      <AppInstallPrompt isAuthenticated={isAuthenticated} />
 
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />

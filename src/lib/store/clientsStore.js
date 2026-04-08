@@ -22,8 +22,8 @@ export const useClientsStore = create((set, get) => ({
     filters: {
         search: '',
         status: '',
-        sortBy: 'nom',
-        sortDir: 'asc',
+        sortBy: 'created_at',
+        sortDir: 'desc',
     },
     stats: null,
 
@@ -43,6 +43,7 @@ export const useClientsStore = create((set, get) => ({
                 status: filters.status,
                 sort_by: filters.sortBy,
                 sort_dir: filters.sortDir,
+                sort_order: filters.sortDir,
             };
 
             // Nettoyer les paramètres vides
@@ -53,7 +54,11 @@ export const useClientsStore = create((set, get) => ({
             const response = await clientsService.getClients(params);
             
             set({
-                clients: response.data || response,
+                clients: [...(response.data || response)].sort((a, b) => {
+                    const dateA = new Date(a.created_at || a.date_inscription || 0).getTime();
+                    const dateB = new Date(b.created_at || b.date_inscription || 0).getTime();
+                    return dateB - dateA;
+                }),
                 pagination: response.meta || {
                     total: response.length,
                     per_page: pagination.per_page,
@@ -270,8 +275,8 @@ export const useClientsStore = create((set, get) => ({
             filters: {
                 search: '',
                 status: '',
-                sortBy: 'nom',
-                sortDir: 'asc',
+                sortBy: 'created_at',
+                sortDir: 'desc',
             },
             stats: null,
         });

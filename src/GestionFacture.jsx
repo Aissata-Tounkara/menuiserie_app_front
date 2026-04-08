@@ -233,8 +233,7 @@ const statsCards = useMemo(() => {
         const Icon = getIcon(status);
         return (
           <span 
-            onClick={() => openConfirmModal(row)}
-            className={`px-3 py-1 rounded-full text-xs font-medium ${getColor(status)} ${status !== 'Payée' ? 'cursor-pointer hover:opacity-80' : ''}`}
+            className={`px-3 py-1 rounded-full text-xs font-medium ${getColor(status)}`}
           >
             <Icon className="w-3 h-3 inline mr-1" />
             {status}

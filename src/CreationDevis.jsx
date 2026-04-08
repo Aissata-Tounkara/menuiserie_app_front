@@ -68,8 +68,10 @@ export default function CreationDevis() {
     { produit: 'Fenêtre toilette', largeur: 0.60, hauteur: 0.60, prix: 37500 }
   ];
 
-  const PRIX_ALU_M2 = 45000;
-  const TAUX_MAJORATION = 0.15;
+  const PRIX_ALU_CM2 = 5.0;
+  const TAUX_MAJORATION = 0;
+  const PRIX_PORTE_CM2 = 5.8;
+  const FENETRE_PRIX_CM2 = 7.38;
 
   const [devisInfo, setDevisInfo] = useState({
     dateEmission: new Date().toISOString().split('T')[0],
@@ -94,20 +96,90 @@ export default function CreationDevis() {
 
   
   // === LOGIQUE MÉTIER ===
-  const calculatePrix = (produit, largeur, hauteur) => {
-    if (!largeur || !hauteur) return 0;
+  const getStandardFormat = (produit, largeur, hauteur) => {
     const L = parseFloat(largeur);
     const H = parseFloat(hauteur);
-    const standard = formatsStandards.find(
-      f =>
+
+    return formatsStandards.find(
+      (f) =>
         f.produit === produit &&
         Math.abs(f.largeur - L) < 0.01 &&
         Math.abs(f.hauteur - H) < 0.01
     );
+  };
+
+  const isFenetre = (produit) => {
+    const nom = (produit || '').toLowerCase();
+    return nom.includes('fenêtre') || nom.includes('fenetre');
+  };
+
+  const isPorte = (produit) => (produit || '').toLowerCase().includes('porte');
+
+  const convertSurfaceToCm2 = (largeur, hauteur) => {
+    const L = parseFloat(largeur);
+    const H = parseFloat(hauteur);
+    return (L * 100) * (H * 100);
+  };
+
+  const calculatePrixPersonnaliseBase = (produit, surfaceCm2) => {
+    if (isFenetre(produit)) {
+      return surfaceCm2 * FENETRE_PRIX_CM2;
+    }
+
+    if (isPorte(produit)) {
+      return surfaceCm2 * PRIX_PORTE_CM2;
+    }
+
+    return surfaceCm2 * PRIX_ALU_CM2;
+  };
+
+  const calculatePrix = (produit, largeur, hauteur) => {
+    if (!largeur || !hauteur) return 0;
+
+    const standard = getStandardFormat(produit, largeur, hauteur);
     if (standard) return standard.prix;
-    const surface = L * H;
-    const prixBase = surface * PRIX_ALU_M2;
-    return Math.round(prixBase + prixBase * TAUX_MAJORATION);
+
+    const surfaceCm2 = convertSurfaceToCm2(largeur, hauteur);
+    const prixBase = calculatePrixPersonnaliseBase(produit, surfaceCm2);
+    const prixFinal = prixBase * (1 + TAUX_MAJORATION);
+
+    return Math.round(prixFinal);
+  };
+
+// ✅ Version corrigée - toujours retourner une string
+const sanitizePositiveDecimal = (value) => {
+  if (value === '' || value === null || value === undefined) return '';
+  const parsed = parseFloat(value);
+  if (Number.isNaN(parsed)) return '';
+  // Retourne TOUJOURS une string, même pour 0
+  return Math.max(0, parsed).toString();
+};
+
+const sanitizePositiveInteger = (value, fallback = 1) => {
+  if (value === '' || value === null || value === undefined) return fallback.toString();
+  const parsed = parseInt(value, 10);
+  if (Number.isNaN(parsed)) return fallback.toString();
+  return Math.max(fallback, parsed).toString(); // ← string aussi
+};
+
+  const sanitizePercent = (value) => {
+    if (value === '') return 0;
+    const parsed = parseFloat(value);
+    if (Number.isNaN(parsed)) return 0;
+    return Math.min(100, Math.max(0, parsed));
+  };
+
+  const blockNegativeNumberInput = (event) => {
+    if (['-', '+', 'e', 'E'].includes(event.key)) {
+      event.preventDefault();
+    }
+  };
+
+  const blockNegativePaste = (event) => {
+    const pasted = event.clipboardData.getData('text');
+    if (/[+\-]/.test(pasted)) {
+      event.preventDefault();
+    }
   };
  
 
@@ -482,21 +554,39 @@ const handleAddNewClient = async () => {
 
                 {currentLigne.produit !== 'Installation et pose' && (
                   <>
-                    <Input
-                      name="largeur"
-                      label="Largeur (m)"
-                      type="number"
-                      step="0.01"
-                      value={currentLigne.largeur}
-                      onChange={(e) => setCurrentLigne({ ...currentLigne, largeur: e.target.value })}
-                    />
+                  <Input
+                        name="largeur"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={currentLigne.largeur}
+                        onKeyDown={blockNegativeNumberInput}
+                        onPaste={blockNegativePaste}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          // Option 1 : sanitization immédiate (peut cauter des sauts de curseur)
+                          setCurrentLigne({ ...currentLigne, largeur: sanitizePositiveDecimal(raw) });
+                          
+                          // Option 2 (recommandée) : laisser l'utilisateur taper, corriger onBlur
+                          // setCurrentLigne({ ...currentLigne, largeur: raw });
+                        }}
+                        // Ajoute onBlur pour corriger après la saisie
+                        onBlur={(e) => {
+                          const corrected = sanitizePositiveDecimal(e.target.value);
+                          setCurrentLigne({ ...currentLigne, largeur: corrected });
+                        }}
+/>
                     <Input
                       name="hauteur"
                       label="Hauteur (m)"
                       type="number"
+                      min="0"
                       step="0.01"
+                      inputMode="decimal"
                       value={currentLigne.hauteur}
-                      onChange={(e) => setCurrentLigne({ ...currentLigne, hauteur: e.target.value })}
+                      onKeyDown={blockNegativeNumberInput}
+                      onPaste={blockNegativePaste}
+                      onChange={(e) => setCurrentLigne({ ...currentLigne, hauteur: sanitizePositiveDecimal(e.target.value) })}
                     />
                     <Select
                       label="Alluminium"
@@ -518,8 +608,12 @@ const handleAddNewClient = async () => {
                   label="Quantité"
                   type="number"
                   min="1"
+                  step="1"
+                  inputMode="numeric"
                   value={currentLigne.quantite}
-                  onChange={(e) => setCurrentLigne({ ...currentLigne, quantite: parseInt(e.target.value) || 1 })}
+                  onKeyDown={blockNegativeNumberInput}
+                  onPaste={blockNegativePaste}
+                  onChange={(e) => setCurrentLigne({ ...currentLigne, quantite: sanitizePositiveInteger(e.target.value) })}
                 />
 
                 <div className="flex items-end">
@@ -625,8 +719,12 @@ const handleAddNewClient = async () => {
                       type="number"
                       min="0"
                       max="100"
+                      step="0.01"
+                      inputMode="decimal"
                       value={devisInfo.remise}
-                      onChange={(e) => setDevisInfo({ ...devisInfo, remise: parseFloat(e.target.value) || 0 })}
+                      onKeyDown={blockNegativeNumberInput}
+                      onPaste={blockNegativePaste}
+                      onChange={(e) => setDevisInfo({ ...devisInfo, remise: sanitizePercent(e.target.value) })}
                       className="w-20"
                     />
                     <span className="text-gray-600">%</span>
@@ -655,8 +753,12 @@ const handleAddNewClient = async () => {
                     type="number"
                     min="0"
                     max="100"
+                    step="0.01"
+                    inputMode="decimal"
                     value={devisInfo.acompte}
-                    onChange={(e) => setDevisInfo({ ...devisInfo, acompte: parseFloat(e.target.value) || 0 })}
+                    onKeyDown={blockNegativeNumberInput}
+                    onPaste={blockNegativePaste}
+                    onChange={(e) => setDevisInfo({ ...devisInfo, acompte: sanitizePercent(e.target.value) })}
                     className="w-20"
                   />
                   <span className="text-gray-600">%</span>
@@ -744,7 +846,7 @@ const handleAddNewClient = async () => {
     onSubmit={handleAddNewClient}
     submitLabel="Ajouter le client"
 
-
+     
     
   />
 </Modal>

@@ -2,7 +2,7 @@
   "name": "Menuiserie-app",
   "short_name": "Menuis-app",
   "description": "Application de menuiserie sur mesure",
-  "start_url": "/dashboard",
+  "start_url": "/gestion-devis",
   "scope": "/",
   "lang": "fr",
   "dir": "ltr",
