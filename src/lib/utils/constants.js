@@ -24,6 +24,7 @@ export const ROUTES = {
     DASHBOARD: '/dashboard',
 
     // Gestion
+    Devis: '/gestion-devis',
     CLIENTS: '/gestion-clients',
     COMMANDES: '/gestion-commandes',
     STOCK: '/gestion-de-stock',

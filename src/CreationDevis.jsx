@@ -4,6 +4,7 @@ import {
   Calculator, FileText, Calendar, Percent, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { Link, useNavigate } from "react-router-dom";
+import { calculerPrixUnitaire, calculerTotaux, formaterPrix } from './lib/utils/pricing';
 
 // Composants réutilisables
 import Header from './components/layout/Header';
@@ -38,8 +39,7 @@ export default function CreationDevis() {
     hauteur: '',
     quantite: 1,
     Alluminium: '',
-    vitrage: '',
-    prixUnitaire: 0
+    vitrage: ''
   });
 
   const navigate = useNavigate();
@@ -67,11 +67,6 @@ export default function CreationDevis() {
     { produit: 'Fenêtre Coulisant', largeur: 1.20, hauteur: 1.10, prix: 97500 },
     { produit: 'Fenêtre toilette', largeur: 0.60, hauteur: 0.60, prix: 37500 }
   ];
-
-  const PRIX_ALU_CM2 = 5.0;
-  const TAUX_MAJORATION = 0;
-  const PRIX_PORTE_CM2 = 5.8;
-  const FENETRE_PRIX_CM2 = 7.38;
 
   const [devisInfo, setDevisInfo] = useState({
     dateEmission: new Date().toISOString().split('T')[0],
@@ -106,44 +101,6 @@ export default function CreationDevis() {
         Math.abs(f.largeur - L) < 0.01 &&
         Math.abs(f.hauteur - H) < 0.01
     );
-  };
-
-  const isFenetre = (produit) => {
-    const nom = (produit || '').toLowerCase();
-    return nom.includes('fenêtre') || nom.includes('fenetre');
-  };
-
-  const isPorte = (produit) => (produit || '').toLowerCase().includes('porte');
-
-  const convertSurfaceToCm2 = (largeur, hauteur) => {
-    const L = parseFloat(largeur);
-    const H = parseFloat(hauteur);
-    return (L * 100) * (H * 100);
-  };
-
-  const calculatePrixPersonnaliseBase = (produit, surfaceCm2) => {
-    if (isFenetre(produit)) {
-      return surfaceCm2 * FENETRE_PRIX_CM2;
-    }
-
-    if (isPorte(produit)) {
-      return surfaceCm2 * PRIX_PORTE_CM2;
-    }
-
-    return surfaceCm2 * PRIX_ALU_CM2;
-  };
-
-  const calculatePrix = (produit, largeur, hauteur) => {
-    if (!largeur || !hauteur) return 0;
-
-    const standard = getStandardFormat(produit, largeur, hauteur);
-    if (standard) return standard.prix;
-
-    const surfaceCm2 = convertSurfaceToCm2(largeur, hauteur);
-    const prixBase = calculatePrixPersonnaliseBase(produit, surfaceCm2);
-    const prixFinal = prixBase * (1 + TAUX_MAJORATION);
-
-    return Math.round(prixFinal);
   };
 
 // ✅ Version corrigée - toujours retourner une string
@@ -185,12 +142,9 @@ const sanitizePositiveInteger = (value, fallback = 1) => {
 
   const ajouterLigne = () => {
     if (currentLigne.produit && (currentLigne.produit === 'Installation et pose' || (currentLigne.largeur && currentLigne.hauteur))) {
-      const prix = calculatePrix(currentLigne.produit, currentLigne.largeur, currentLigne.hauteur);
       const nouvelleLigne = {
         ...currentLigne,
-        id: Date.now(),
-        prixUnitaire: prix,
-        sousTotal: prix * currentLigne.quantite
+        id: Date.now()
       };
       setLignesDevis([...lignesDevis, nouvelleLigne]);
       setCurrentLigne({
@@ -201,8 +155,7 @@ const sanitizePositiveInteger = (value, fallback = 1) => {
         hauteur: '',
         quantite: 1,
         Alluminium: '',
-        vitrage: '',
-        prixUnitaire: 0
+        vitrage: ''
       });
     }
   };
@@ -219,12 +172,7 @@ const sanitizePositiveInteger = (value, fallback = 1) => {
 
   const supprimerLigne = (id) => setLignesDevis(lignesDevis.filter(l => l.id !== id));
 
-  const calculerSousTotal = () => lignesDevis.reduce((total, ligne) => total + ligne.sousTotal, 0);
-  const calculerRemise = () => Math.round(calculerSousTotal() * (devisInfo.remise / 100));
-  const calculerTotalHT = () => calculerSousTotal() - calculerRemise();
-  const calculerTVA = () => 0; // Désactivée
-  const calculerTotalTTC = () => calculerTotalHT();
-  const calculerAcompte = () => Math.round(calculerTotalTTC() * (devisInfo.acompte / 100));
+ const totaux = calculerTotaux(lignesDevis, devisInfo.remise, devisInfo.acompte);
 
   const getDateValidite = () => {
     const date = new Date(devisInfo.dateEmission);
@@ -252,20 +200,18 @@ const sanitizePositiveInteger = (value, fallback = 1) => {
         validite: parseInt(devisInfo.validite),
         delai_livraison: devisInfo.delaiLivraison,
         conditions_paiement: devisInfo.conditionsPaiement,
-        remise_pourcentage: devisInfo.remise,
-        acompte_pourcentage: devisInfo.acompte,
+        remise: devisInfo.remise,
+        acompte: devisInfo.acompte,
         lignes: lignesDevis.map(l => ({
         produit: l.produit,
+        categorie: l.categorie || null,
         description: l.description || null,
         largeur: l.largeur ? parseFloat(l.largeur) : null,
         hauteur: l.hauteur ? parseFloat(l.hauteur) : null,
         quantite: parseInt(l.quantite, 10),
-        prix_unitaire: parseFloat(l.prixUnitaire),
-        alluminium: l.Alluminium || null,
+        aluminium: l.Alluminium || null,
         vitrage: l.vitrage || null
       })),
-        montant_ht: calculerTotalHT(),
-        montant_ttc: calculerTotalTTC(),
         notes: notes
       };
 
@@ -556,6 +502,7 @@ const handleAddNewClient = async () => {
                   <>
                   <Input
                         name="largeur"
+                        label="Largeur (cm)"
                         type="number"
                         min="0"
                         step="0.01"
@@ -578,7 +525,7 @@ const handleAddNewClient = async () => {
 />
                     <Input
                       name="hauteur"
-                      label="Hauteur (m)"
+                      label="Hauteur (cm)"
                       type="number"
                       min="0"
                       step="0.01"
@@ -628,24 +575,15 @@ const handleAddNewClient = async () => {
               </div>
 
               {currentLigne.produit && (currentLigne.produit === 'Installation et pose' || (currentLigne.largeur && currentLigne.hauteur)) && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-green-800">Prix unitaire estimé:</span>
-                    <span className="text-lg font-bold text-green-900">
-                      {calculatePrix(currentLigne.produit, currentLigne.largeur, currentLigne.hauteur).toLocaleString()} Fcfa
-                    </span>
-                  </div>
-                  {formatsStandards.some(
-                    f =>
-                      f.produit === currentLigne.produit &&
-                      Math.abs(f.largeur - parseFloat(currentLigne.largeur)) < 0.01 &&
-                      Math.abs(f.hauteur - parseFloat(currentLigne.hauteur)) < 0.01
-                  ) ? (
-                    <p className="text-xs text-green-600">✓ Prix standard (sans majoration)</p>
-                  ) : (
-                    <p className="text-xs text-orange-600">⚠ Prix calculé par surface + majoration</p>
-                  )}
-                </div>
+                
+                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+    <p className="text-sm text-green-800">
+      Prix unitaire estimé : <strong>
+        {formaterPrix(calculerPrixUnitaire(currentLigne.produit, currentLigne.largeur, currentLigne.hauteur))}
+      </strong>
+    </p>
+  </div>
+
               )}
             </div>
 
@@ -666,12 +604,14 @@ const handleAddNewClient = async () => {
                             )}
                             {ligne.Alluminium && <div>Alluminium: {ligne.Alluminium}</div>}
                             {ligne.vitrage && <div>Vitrage: {ligne.vitrage}</div>}
-                            <div>Quantité: {ligne.quantite} × {ligne.prixUnitaire.toLocaleString()} Fcfa</div>
+                            <div>Quantité: {ligne.quantite}</div>
+                            <div>Prix unitaire: {formaterPrix(calculerPrixUnitaire(ligne.produit, ligne.largeur, ligne.hauteur))}</div>
+                         <div>Sous-total: {formaterPrix(calculerPrixUnitaire(ligne.produit, ligne.largeur, ligne.hauteur) * ligne.quantite)}</div>
                           </div>
                         </div>
                         <div className="text-right ml-4">
-                          <div className="font-bold text-gray-900 text-lg mb-2">
-                            {ligne.sousTotal.toLocaleString()} Fcfa
+                          <div className="font-bold text-gray-900 text-sm mb-2">
+                            Total calculé à l'enregistrement
                           </div>
                           <button
                             onClick={() => supprimerLigne(ligne.id)}
@@ -707,7 +647,7 @@ const handleAddNewClient = async () => {
               <div className="border-t border-gray-200 pt-4 space-y-3 mb-4">
                 <div className="flex justify-between">
                   <span className="text-gray-700">Sous-total:</span>
-                  <span className="font-semibold text-gray-900">{calculerSousTotal().toLocaleString()} Fcfa</span>
+                  <span className="font-semibold text-gray-900">Calculé par le serveur</span>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
@@ -728,20 +668,20 @@ const handleAddNewClient = async () => {
                       className="w-20"
                     />
                     <span className="text-gray-600">%</span>
-                    <span className="text-red-600 font-semibold ml-auto">- {calculerRemise().toLocaleString()} Fcfa</span>
+                    <span className="text-red-600 font-semibold ml-auto">Appliquée par le serveur</span>
                   </div>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">Total HT:</span>
-                  <span className="font-semibold text-gray-900">{calculerTotalHT().toLocaleString()} Fcfa</span>
+                  <span className="font-semibold text-gray-900">Calculé par le serveur</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">TVA (0%):</span>
-                  <span className="font-semibold text-gray-900">{calculerTVA().toLocaleString()} Fcfa</span>
+                  <span className="font-semibold text-gray-900">0 Fcfa</span>
                 </div>
                 <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
                   <span className="text-lg font-bold text-gray-900">Total TTC:</span>
-                  <span className="text-2xl font-bold text-blue-600">{calculerTotalTTC().toLocaleString()} Fcfa</span>
+                  <span className="text-2xl font-bold text-blue-600">Calculé par le serveur</span>
                 </div>
               </div>
 
@@ -761,20 +701,20 @@ const handleAddNewClient = async () => {
                     onChange={(e) => setDevisInfo({ ...devisInfo, acompte: sanitizePercent(e.target.value) })}
                     className="w-20"
                   />
-                  <span className="text-gray-600">%</span>
-                </div>
-                {devisInfo.acompte > 0 && (
-                  <div className="bg-blue-50 rounded-lg p-3 text-sm mt-2">
-                    <div className="flex justify-between mb-1">
-                      <span className="text-blue-700">Acompte:</span>
-                      <span className="font-semibold text-blue-900">{calculerAcompte().toLocaleString()} Fcfa</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-blue-700">Solde:</span>
-                      <span className="font-semibold text-blue-900">{(calculerTotalTTC() - calculerAcompte()).toLocaleString()} Fcfa</span>
-                    </div>
+                    <span className="text-gray-600">%</span>
                   </div>
-                )}
+                  {devisInfo.acompte > 0 && (
+                    <div className="bg-blue-50 rounded-lg p-3 text-sm mt-2">
+                      <div className="flex justify-between mb-1">
+                        <span className="text-blue-700">Acompte:</span>
+                        <span className="font-semibold text-blue-900">Calculé par le serveur</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Solde:</span>
+                        <span className="font-semibold text-blue-900">Calculé par le serveur</span>
+                      </div>
+                    </div>
+                  )}
               </div>
 
               <div className="space-y-3">
@@ -846,7 +786,7 @@ const handleAddNewClient = async () => {
     onSubmit={handleAddNewClient}
     submitLabel="Ajouter le client"
 
-     
+
     
   />
 </Modal>

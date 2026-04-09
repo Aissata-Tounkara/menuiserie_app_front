@@ -76,7 +76,7 @@ const handleSubmit = async (e) => {
     // Redirection après un délai
     setTimeout(() => {
       setShowSuccess(false);
-      navigate(ROUTES.DASHBOARD);
+      navigate(ROUTES.DEVIS);
     }, 1500);
 
   } catch (error) {
