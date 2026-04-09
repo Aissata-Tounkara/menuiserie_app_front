@@ -1,19 +1,29 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
+  canShowInstallPromptAfterLogin,
+  clearInstallPromptEligibility,
   getInstallAvailabilityEventName,
   isIosDevice,
   markInstallPromptDismissed,
   shouldShowInstallPrompt,
   triggerInstallPrompt,
 } from '../../lib/pwa/installManager';
+import { ROUTES } from '../../lib/utils/constants';
 
 export default function AppInstallPrompt({ isAuthenticated }) {
   const [open, setOpen] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const location = useLocation();
   const ios = isIosDevice();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    const canOpenPrompt =
+      isAuthenticated &&
+      location.pathname !== ROUTES.LOGIN &&
+      canShowInstallPromptAfterLogin();
+
+    if (!canOpenPrompt) {
       setOpen(false);
       return;
     }
@@ -24,7 +34,7 @@ export default function AppInstallPrompt({ isAuthenticated }) {
 
     const eventName = getInstallAvailabilityEventName();
     const handleAvailable = () => {
-      if (isAuthenticated && shouldShowInstallPrompt()) {
+      if (canOpenPrompt && shouldShowInstallPrompt()) {
         setOpen(true);
       }
     };
@@ -34,19 +44,21 @@ export default function AppInstallPrompt({ isAuthenticated }) {
     return () => {
       window.removeEventListener(eventName, handleAvailable);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, location.pathname]);
 
-  if (!open || !isAuthenticated) {
+  if (!open || !isAuthenticated || location.pathname === ROUTES.LOGIN) {
     return null;
   }
 
   const handleClose = () => {
     markInstallPromptDismissed();
+    clearInstallPromptEligibility();
     setOpen(false);
   };
 
   const handleInstall = async () => {
     if (ios) {
+      clearInstallPromptEligibility();
       return;
     }
 
@@ -59,6 +71,7 @@ export default function AppInstallPrompt({ isAuthenticated }) {
         markInstallPromptDismissed();
       }
 
+      clearInstallPromptEligibility();
       setOpen(false);
     } finally {
       setInstalling(false);
@@ -77,8 +90,8 @@ export default function AppInstallPrompt({ isAuthenticated }) {
 
         {ios ? (
           <div className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
-            Sur iPhone ou iPad, touchez le bouton Partager de Safari puis choisissez
-            {' '}<strong>Sur l'ecran d'accueil</strong>.
+            Sur iPhone ou iPad, touchez le bouton Partager de Safari puis choisissez{' '}
+            <strong>Sur l'ecran d'accueil</strong>.
           </div>
         ) : (
           <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">

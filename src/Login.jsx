@@ -6,6 +6,17 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from './lib/store/authStore';
 import { validateEmail, validatePassword } from './lib/utils/validation';
 import { MESSAGES, ROUTES } from './lib/utils/constants';
+import { markInstallPromptEligibleAfterLogin } from './lib/pwa/installManager';
+
+const resolvePostLoginRoute = (response) => {
+  const backendRoute = response?.post_login_redirect;
+
+  if (backendRoute === '/devis' || backendRoute === ROUTES.DEVIS) {
+    return ROUTES.DEVIS;
+  }
+
+  return ROUTES.DEVIS;
+};
 
 export default function PageConnexion() {
   const [showPassword, setShowPassword] = useState(false);
@@ -72,11 +83,14 @@ const handleSubmit = async (e) => {
 
     // Succès
     setShowSuccess(true);
+    markInstallPromptEligibleAfterLogin();
+
+    const destination = resolvePostLoginRoute(response);
 
     // Redirection après un délai
     setTimeout(() => {
       setShowSuccess(false);
-      navigate(ROUTES.DEVIS);
+      navigate(destination, { replace: true });
     }, 1500);
 
   } catch (error) {

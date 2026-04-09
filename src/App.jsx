@@ -12,6 +12,8 @@ import GestionDepenses from './GestionDepenses';
 import GestionActivites from './GestionActivites';
 import ForgotPassword from './ForgotPassword';
 import AdminRoute from './components/auth/AdminRoute';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import GuestRoute from './components/auth/GuestRoute';
 import AppInstallPrompt from './components/pwa/AppInstallPrompt';
 import { useAuthStore } from './lib/store/authStore';
 
@@ -30,15 +32,50 @@ function App() {
 
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<Login />} />
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <Login />
+            </GuestRoute>
+          }
+        />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
         {/* <Route path="/dashboard" element={<Dashbord />} /> */}
-        <Route path="/gestion-devis" element={<CreationDevis />} />
-        <Route path="/gestion-clients" element={<GestionClients />} />
-        <Route path="/gestion-commandes" element={<GestionCommandes />} />
+        <Route
+          path="/gestion-devis"
+          element={
+            <ProtectedRoute>
+              <CreationDevis />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/gestion-clients"
+          element={
+            <ProtectedRoute>
+              <GestionClients />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/gestion-commandes"
+          element={
+            <ProtectedRoute>
+              <GestionCommandes />
+            </ProtectedRoute>
+          }
+        />
         {/* <Route path="/gestion-de-stock" element={<GestionStock />} /> */}
-        <Route path="/gestion-de-facture" element={<GestionFactures />} />
+        <Route
+          path="/gestion-de-facture"
+          element={
+            <ProtectedRoute>
+              <GestionFactures />
+            </ProtectedRoute>
+          }
+        />
         {/* <Route path="/gestion-depenses" element={<GestionDepenses />} /> */}
         <Route
           path="/activites"

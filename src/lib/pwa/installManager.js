@@ -1,6 +1,7 @@
 let deferredInstallPrompt = null;
 
 const INSTALL_EVENT_NAME = 'menuiserie-app-install-available';
+const INSTALL_ELIGIBLE_AFTER_LOGIN_KEY = 'menuiserie_install_prompt_after_login';
 
 export function initializeInstallPrompt() {
   if (typeof window === 'undefined') {
@@ -15,6 +16,7 @@ export function initializeInstallPrompt() {
 
   window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = null;
+    clearInstallPromptEligibility();
     window.localStorage.setItem('menuiserie_pwa_installed', 'true');
   });
 }
@@ -92,6 +94,30 @@ export function resetInstallPromptSession() {
   }
 
   window.sessionStorage.removeItem('menuiserie_install_prompt_dismissed');
+}
+
+export function markInstallPromptEligibleAfterLogin() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.sessionStorage.setItem(INSTALL_ELIGIBLE_AFTER_LOGIN_KEY, 'true');
+}
+
+export function canShowInstallPromptAfterLogin() {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  return window.sessionStorage.getItem(INSTALL_ELIGIBLE_AFTER_LOGIN_KEY) === 'true';
+}
+
+export function clearInstallPromptEligibility() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.sessionStorage.removeItem(INSTALL_ELIGIBLE_AFTER_LOGIN_KEY);
 }
 
 export function registerServiceWorker() {
