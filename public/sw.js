@@ -1,4 +1,4 @@
-const CACHE_NAME = 'menuiserie-app-v1';
+const CACHE_NAME = 'menuiserie-app-v2';
 const APP_SHELL = ['/', '/index.html', '/favicon/site.webmanifest'];
 
 self.addEventListener('install', (event) => {
@@ -23,6 +23,24 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') {
+    return;
+  }
+
+  const isNavigation =
+    event.request.mode === 'navigate' ||
+    event.request.destination === 'document' ||
+    event.request.headers.get('accept')?.includes('text/html');
+
+  if (isNavigation) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', responseClone));
+          return networkResponse;
+        })
+        .catch(() => caches.match('/index.html'))
+    );
     return;
   }
 
