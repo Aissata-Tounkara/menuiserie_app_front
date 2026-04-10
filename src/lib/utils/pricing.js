@@ -10,8 +10,8 @@ const FORMATS_STANDARD = {
 };
 
 const PRIX_PORTE_CM2   = 5.8;
-const FENETRE_PRIX_CM2 = 8.38;
-const PRIX_ALU_CM2     = 9.00;
+const FENETRE_PRIX_CM2 = 7.38;
+const PRIX_ALU_CM2     = 8.00;
 const TAUX_MAJORATION  = 0;
 
 function estPorte(produit)   { return produit.toLowerCase().includes('porte'); }
