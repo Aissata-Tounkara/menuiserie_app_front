@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, Mail, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 
 // Imports depuis lib/
 import { useAuthStore } from './lib/store/authStore';
@@ -28,7 +29,6 @@ export default function PageConnexion() {
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const navigate = useNavigate();
   
   // Zustand store
@@ -82,16 +82,12 @@ const handleSubmit = async (e) => {
     });
 
     // Succès
-    setShowSuccess(true);
     markInstallPromptEligibleAfterLogin();
+    toast.success(MESSAGES.SUCCESS.LOGIN);
 
     const destination = resolvePostLoginRoute(response);
-
-    // Redirection après un délai
-    setTimeout(() => {
-      setShowSuccess(false);
-      navigate(destination, { replace: true });
-    }, 1500);
+    setIsLoading(false);
+    navigate(destination, { replace: true });
 
   } catch (error) {
     setIsLoading(false);
@@ -110,14 +106,6 @@ const handleSubmit = async (e) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4">
-      {/* Success Toast */}
-      {showSuccess && (
-        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 animate-slide-in z-50">
-          <CheckCircle className="w-5 h-5" />
-          <span className="font-medium">Connexion réussie !</span>
-        </div>
-      )}
-
       <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
         {/* Left Side - Branding */}
         <div className="hidden lg:block">
