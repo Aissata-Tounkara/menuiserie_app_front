@@ -1,4 +1,6 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 import Select from '../ui/Select';
 import { useAuthStore } from '../../lib/store/authStore';
 
@@ -12,7 +14,17 @@ const Header = ({
   userName,
 }) => {
   const [showLinks, setShowLinks] = useState(false);
-  const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+    }
+  };
 
   const resolvedNavigationLinks = useMemo(() => {
     const hasActivityLink = navigationLinks.some((link) => link.href === '/activites');
@@ -99,6 +111,16 @@ const Header = ({
                 <span className="hidden sm:inline">{action.label}</span>
               </button>
             ))}
+
+            {/* Bouton de déconnexion */}
+            <button
+              onClick={handleLogout}
+              className="px-3 py-2 text-sm sm:px-4 sm:py-2 sm:text-base rounded-lg flex items-center gap-2 transition-colors border border-red-300 text-red-700 hover:bg-red-50"
+              title="Déconnexion"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Déconnexion</span>
+            </button>
           </div>
         </div>
       </div>

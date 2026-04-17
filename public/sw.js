@@ -1,4 +1,4 @@
-const CACHE_NAME = 'menuiserie-app-v4';
+const CACHE_NAME = 'menuiserie-app-v5';
 const APP_SHELL = ['/', '/index.html', '/favicon/site.webmanifest'];
 
 self.addEventListener('install', (event) => {
